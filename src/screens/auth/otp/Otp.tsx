@@ -10,7 +10,8 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+// import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import {
@@ -25,18 +26,21 @@ import CustomButton from '../../../components/customButton/CustomButton';
 import { ColorConstants } from '../../../constants/colorConstants';
 import { Fontconstants } from '../../../constants/fontConstants';
 import { showToast } from '../../../utils/toast';
+import { verifyPatientOtp } from '../../../network/api';
 
-type OTPNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'Otp'
->;
+type OTPNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Otp'>;
+type OTPRouteProp = RouteProp<RootStackParamList, 'Otp'>;
 
 const Otp = () => {
   const navigation = useNavigation<OTPNavigationProp>();
+  const route = useRoute<OTPRouteProp>();
+
+  const { phone } = route.params;
 
   const [otp, setOtp] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
 
   const inputRef = useRef<TextInput>(null);
   const isKeyboardVisibleRef = useRef(false);
@@ -90,14 +94,56 @@ const Otp = () => {
   /**
    * Verify OTP
    */
-  const handleVerify = () => {
+  // const handleVerify = () => {
+  //   if (otp.length !== 6) {
+  //     console.log('Please enter a valid OTP');
+  //     return;
+  //   }
+
+  //   console.log('OTP:', otp);
+  //   navigation.replace('PatientTabs');
+  // };
+
+  const handleVerify = async () => {
     if (otp.length !== 6) {
-      console.log('Please enter a valid OTP');
+      showToast('Please enter a valid 6-digit OTP', 'error');
       return;
     }
 
-    console.log('OTP:', otp);
-    navigation.replace('PatientTabs');
+    if (verifyLoading) {
+      return;
+    }
+
+    try {
+      setVerifyLoading(true);
+
+      const response = await verifyPatientOtp({
+        phone,
+        otp,
+      });
+
+      console.log('Verify OTP response:', response);
+
+      if (!response?.success || response?.isValid === false) {
+        showToast(response?.message || 'Invalid OTP', 'error');
+        return;
+      }
+
+      showToast(response?.message || 'OTP verified successfully', 'success');
+
+      navigation.replace('PatientTabs');
+    } catch (error: any) {
+      console.log('Verify OTP error:', error?.response?.data || error?.message);
+
+      showToast(
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          'Unable to verify OTP',
+        'error',
+      );
+    } finally {
+      setVerifyLoading(false);
+    }
   };
 
   /**
@@ -115,9 +161,9 @@ const Otp = () => {
   };
 
   useEffect(() => {
-showToast('Your Otp 123456', 'info');
-  }, [])
-  
+    showToast('Your Otp 123456', 'info');
+  }, []);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -142,12 +188,7 @@ showToast('Your Otp 123456', 'info');
                 key={index}
                 onPress={() => handleOtpBoxPress(index)}
               >
-                <View
-                  style={[
-                    styles.otpBox,
-                    isActive && styles.activeOtpBox,
-                  ]}
-                >
+                <View style={[styles.otpBox, isActive && styles.activeOtpBox]}>
                   <Text style={styles.otpText}>{otp[index] || ''}</Text>
                 </View>
               </TouchableWithoutFeedback>
@@ -169,9 +210,19 @@ showToast('Your Otp 123456', 'info');
         </View>
 
         {/* Verify Button */}
-        <CustomButton
+        {/* <CustomButton
           disable={otp.length !== 6}
           title="Verify"
+          topHeight={30}
+          bgColor={ColorConstants.BTNCOLOR}
+          fontsize={14}
+          fontfamily={Fontconstants.SEMIBOLD}
+          bordRadius={scale(12)}
+          onPress={handleVerify}
+        /> */}
+        <CustomButton
+          disable={otp.length !== 6 || verifyLoading}
+          title={verifyLoading ? 'Verifying...' : 'Verify'}
           topHeight={30}
           bgColor={ColorConstants.BTNCOLOR}
           fontsize={14}

@@ -4,7 +4,10 @@ export type RootStackParamList = {
     Welcome: undefined;
     LoginScreen: undefined;
     Signup: undefined;
-    Otp: undefined;
+    // Otp: undefined;
+      Otp: {
+    phone: string;
+  };
     // RoleSelect: undefined;
 
     PatientTabs: undefined;

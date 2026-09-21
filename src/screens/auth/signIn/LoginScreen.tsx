@@ -43,7 +43,7 @@ import { Fontconstants } from '../../../constants/fontConstants';
 import { scale } from '../../../utils/scale';
 import BackHeader from '../../../components/backHeader/BackHeader';
 import Divider from '../../../components/divider/Divider';
-import { patientSignin } from '../../../network/api';
+import { patientSignin, verifyPatientPhone } from '../../../network/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -64,6 +64,7 @@ export default function LoginScreen() {
   const [showOTP, setShowOTP] = useState(false);
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
 
   const navigateAfterLogin = () => {
     // if (selectedRole === 'patient') {
@@ -333,9 +334,52 @@ export default function LoginScreen() {
     }
   };
 
-  const handleSendOtp = async () => {
-    navigation.navigate('Otp');
-  };
+const handleSendOtp = async () => {
+  const phone = mobile.trim();
+
+  if (!/^\d{10}$/.test(phone)) {
+    showToast(
+      'Please enter a valid 10-digit mobile number',
+      'error',
+    );
+    return;
+  }
+
+  try {
+    setOtpLoading(true);
+
+    const response = await verifyPatientPhone({
+      phone,
+    });
+
+    console.log('MobileVerify response:', response);
+
+    if (!response?.success || !response?.isValid) {
+      showToast(
+        response?.message || 'Phone number is not valid',
+        'error',
+      );
+      return;
+    }
+
+    showToast(
+      response.message || 'Phone number verified',
+      'success',
+    );
+
+    navigation.navigate('Otp', {
+      phone: response.data?.phone || phone,
+    });
+  } catch (error: any) {
+    showToast(
+      error?.response?.data?.message ||
+        'Unable to verify phone number',
+      'error',
+    );
+  } finally {
+    setOtpLoading(false);
+  }
+};
 
   return (
     <View

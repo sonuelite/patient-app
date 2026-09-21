@@ -1,5 +1,12 @@
 import axios from 'axios';
 
+const API_BASE_URL =
+  'https://hims-api.zynotechnologies.com';
+
+// ==============================
+// Register Patient
+// ==============================
+
 export interface RegisterPatientData {
   firstName: string;
   lastName: string;
@@ -15,7 +22,9 @@ export interface RegisterPatientData {
   };
 }
 
-export const registerPatient = async (data: RegisterPatientData) => {
+export const registerPatient = async (
+  data: RegisterPatientData,
+) => {
   const formData = new FormData();
 
   formData.append('firstName', data.firstName);
@@ -38,7 +47,7 @@ export const registerPatient = async (data: RegisterPatientData) => {
   }
 
   const response = await axios.post(
-    'https://hims-api.zynotechnologies.com/api/v1/patient/register_patient',
+    `${API_BASE_URL}/api/v1/patient/register_patient`,
     formData,
     {
       headers: {
@@ -52,6 +61,10 @@ export const registerPatient = async (data: RegisterPatientData) => {
   return response.data;
 };
 
+// ==============================
+// Patient Sign In
+// ==============================
+
 export interface PatientSigninData {
   email: string;
   password: string;
@@ -61,7 +74,72 @@ export const patientSignin = async (
   data: PatientSigninData,
 ) => {
   const response = await axios.post(
-    'https://hims-api.zynotechnologies.com/api/v1/patient/patientSignin',
+    `${API_BASE_URL}/api/v1/patient/patientSignin`,
+    data,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 30000,
+    },
+  );
+
+  return response.data;
+};
+
+// ==============================
+// Verify Patient Phone
+// ==============================
+
+export interface VerifyPatientPhoneData {
+  phone: string;
+}
+
+export interface VerifyPatientPhoneResponse {
+  success: boolean;
+  message?: string;
+  data?: unknown;
+}
+
+export const verifyPatientPhone = async (
+  data: VerifyPatientPhoneData,
+): Promise<VerifyPatientPhoneResponse> => {
+  const response =
+    await axios.post<VerifyPatientPhoneResponse>(
+      `${API_BASE_URL}/api/v1/patient/verifyPhone`,
+      data,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
+      },
+    );
+
+  return response.data;
+};
+
+export interface VerifyOtpData {
+  phone: string;
+  otp: string;
+}
+
+export interface VerifyOtpResponse {
+  success: boolean;
+  message?: string;
+  isValid?: boolean;
+  data?: {
+    accessToken?: string;
+    [key: string]: unknown;
+  };
+  accessToken?: string;
+}
+
+export const verifyPatientOtp = async (
+  data: VerifyOtpData,
+): Promise<VerifyOtpResponse> => {
+  const response = await axios.post<VerifyOtpResponse>(
+    `${API_BASE_URL}/api/v1/patient/verifyOtp`,
     data,
     {
       headers: {
