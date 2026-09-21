@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 
 import { useNavigation } from '@react-navigation/native';
@@ -63,7 +64,6 @@ export default function LoginScreen() {
   const [showOTP, setShowOTP] = useState(false);
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
-  
 
   const navigateAfterLogin = () => {
     // if (selectedRole === 'patient') {
@@ -156,207 +156,186 @@ export default function LoginScreen() {
   //     }
   //   };
 
-//   const handleLogin = () => {
-//     console.log('handleLoginFunction');
-//   };
+  //   const handleLogin = () => {
+  //     console.log('handleLoginFunction');
+  //   };
 
-// const handleLogin = async () => {
-//   console.log("In handleLogin");
-  
-//   const normalizedEmail = email.trim().toLowerCase();
+  // const handleLogin = async () => {
+  //   console.log("In handleLogin");
 
-//   if (!normalizedEmail) {
-//     showToast('Please enter your email address', 'error');
-//     return;
-//   }
+  //   const normalizedEmail = email.trim().toLowerCase();
 
-//   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  //   if (!normalizedEmail) {
+  //     showToast('Please enter your email address', 'error');
+  //     return;
+  //   }
 
-//   if (!emailPattern.test(normalizedEmail)) {
-//     showToast('Please enter a valid email address', 'error');
-//     return;
-//   }
+  //   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-//   if (!password.trim()) {
-//     showToast('Please enter your password', 'error');
-//     return;
-//   }
+  //   if (!emailPattern.test(normalizedEmail)) {
+  //     showToast('Please enter a valid email address', 'error');
+  //     return;
+  //   }
 
-//   if (loading) {
-//     return;
-//   }
+  //   if (!password.trim()) {
+  //     showToast('Please enter your password', 'error');
+  //     return;
+  //   }
 
-//   try {
-//     setLoading(true);
+  //   if (loading) {
+  //     return;
+  //   }
 
-//     const response = await patientSignin({
-//       email: normalizedEmail,
-//       password,
-//     });
+  //   try {
+  //     setLoading(true);
 
-//     console.log("patientSignInResponse->",response);
-    
-//     if (!response.success) {
-//       showToast(
-//         response.message || 'Unable to sign in',
-//         'error',
-//       );
-//       return;
-//     }
+  //     const response = await patientSignin({
+  //       email: normalizedEmail,
+  //       password,
+  //     });
 
-//     const accessToken =
-//       response.data?.accessToken || response.accessToken;
+  //     console.log("patientSignInResponse->",response);
 
-//     if (!accessToken) {
-//       showToast(
-//         'Access token was not received from the server',
-//         'error',
-//       );
-//       return;
-//     }
+  //     if (!response.success) {
+  //       showToast(
+  //         response.message || 'Unable to sign in',
+  //         'error',
+  //       );
+  //       return;
+  //     }
 
-//     await AsyncStorage.setItem(
-//       'access_token',
-//       accessToken,
-//     );
+  //     const accessToken =
+  //       response.data?.accessToken || response.accessToken;
 
-//     showToast(
-//       response.message || 'Login successful',
-//       'success',
-//     );
+  //     if (!accessToken) {
+  //       showToast(
+  //         'Access token was not received from the server',
+  //         'error',
+  //       );
+  //       return;
+  //     }
 
-//     navigation.replace('PatientTabs');
-//   } catch (error: any) {
-//   console.log(
-//     'Patient sign-in error response:',
-//     JSON.stringify(error.response?.data, null, 2),
-//   );
+  //     await AsyncStorage.setItem(
+  //       'access_token',
+  //       accessToken,
+  //     );
 
-//   console.log('Status code:', error.response?.status);
+  //     showToast(
+  //       response.message || 'Login successful',
+  //       'success',
+  //     );
 
-//   const message =
-//     error.response?.data?.message ||
-//     error.response?.data?.error ||
-//     'Invalid email or password';
+  //     navigation.replace('PatientTabs');
+  //   } catch (error: any) {
+  //   console.log(
+  //     'Patient sign-in error response:',
+  //     JSON.stringify(error.response?.data, null, 2),
+  //   );
 
-//   showToast(message, 'error');
-// } finally {
-//     setLoading(false);
-//   }
-// };
+  //   console.log('Status code:', error.response?.status);
 
-const handleLogin = async () => {
-  const normalizedEmail = email.trim().toLowerCase();
-  const normalizedPassword = password.trim();
+  //   const message =
+  //     error.response?.data?.message ||
+  //     error.response?.data?.error ||
+  //     'Invalid email or password';
 
-  if (!normalizedEmail) {
-    showToast('Please enter your email address', 'error');
-    return;
-  }
+  //   showToast(message, 'error');
+  // } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const handleLogin = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPassword = password.trim();
 
-  if (!emailPattern.test(normalizedEmail)) {
-    showToast('Please enter a valid email address', 'error');
-    return;
-  }
-
-  if (!normalizedPassword) {
-    showToast('Please enter your password', 'error');
-    return;
-  }
-
-  if (loading) {
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    const response = await patientSignin({
-      email: normalizedEmail,
-      password: normalizedPassword,
-    });
-
-    console.log('Patient sign-in response:', response);
-
-    if (!response?.success) {
-      showToast(
-        response?.message || 'Unable to sign in',
-        'error',
-      );
+    if (!normalizedEmail) {
+      showToast('Please enter your email address', 'error');
       return;
     }
 
-    const accessToken =
-      response?.data?.accessToken ||
-      response?.accessToken;
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!accessToken) {
-      showToast(
-        'Access token was not received from the server',
-        'error',
-      );
+    if (!emailPattern.test(normalizedEmail)) {
+      showToast('Please enter a valid email address', 'error');
       return;
     }
 
-    // Save only the access token
-    await AsyncStorage.setItem(
-      'access_token',
-      accessToken,
-    );
-
-    // Verify that the access token was saved
-    const savedAccessToken =
-      await AsyncStorage.getItem('access_token');
-
-      console.log("savedAccessToken->",savedAccessToken);
-      
-    if (!savedAccessToken) {
-      showToast(
-        'Access token could not be saved',
-        'error',
-      );
+    if (!normalizedPassword) {
+      showToast('Please enter your password', 'error');
       return;
     }
 
-    console.log(
-      'Access token saved successfully:',
-      Boolean(savedAccessToken),
-    );
+    if (loading) {
+      return;
+    }
 
-    showToast(
-      response?.message || 'Login successful',
-      'success',
-    );
+    try {
+      setLoading(true);
 
-    // navigation.replace('PatientTabs');
-  } catch (error: any) {
-    console.log(
-      'Patient sign-in error:',
-      JSON.stringify(
-        error?.response?.data || error?.message,
-        null,
-        2,
-      ),
-    );
+      const response = await patientSignin({
+        email: normalizedEmail,
+        password: normalizedPassword,
+      });
 
-    console.log(
-      'Patient sign-in status:',
-      error?.response?.status,
-    );
+      console.log('Patient sign-in response:', response);
 
-    const message =
-      error?.response?.data?.message ||
-      error?.response?.data?.error ||
-      error?.message ||
-      'Invalid email or password';
+      if (!response?.success) {
+        showToast(response?.message || 'Unable to sign in', 'error');
+        return;
+      }
 
-    showToast(message, 'error');
-  } finally {
-    setLoading(false);
-  }
-};
+      const accessToken = response?.data?.accessToken || response?.accessToken;
+
+      if (!accessToken) {
+        showToast('Access token was not received from the server', 'error');
+        return;
+      }
+
+      // Save only the access token
+      await AsyncStorage.setItem('access_token', accessToken);
+
+      // Verify that the access token was saved
+      const savedAccessToken = await AsyncStorage.getItem('access_token');
+
+      console.log('savedAccessToken->', savedAccessToken);
+
+      if (!savedAccessToken) {
+        showToast('Access token could not be saved', 'error');
+        return;
+      }
+
+      console.log(
+        'Access token saved successfully:',
+        Boolean(savedAccessToken),
+      );
+
+      showToast(response?.message || 'Login successful', 'success');
+
+      navigation.replace('PatientTabs');
+    } catch (error: any) {
+      console.log(
+        'Patient sign-in error:',
+        JSON.stringify(error?.response?.data || error?.message, null, 2),
+      );
+
+      console.log('Patient sign-in status:', error?.response?.status);
+
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'Invalid email or password';
+
+      showToast(message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendOtp = async () => {
+    navigation.navigate('Otp');
+  };
 
   return (
     <View
@@ -475,7 +454,7 @@ const handleLogin = async () => {
             fontsize={14}
             fontfamily={Fontconstants.SEMIBOLD}
             bordRadius={scale(12)}
-            onPress={() => console.log('Send OTP')}
+            onPress={handleSendOtp}
           />
         )}
 
@@ -484,7 +463,7 @@ const handleLogin = async () => {
             height: mode === 'mobile' && !showOTP ? 0 : Spacing.md,
           }}
         />
-        {mode === 'email' && (
+        {/* {mode === 'email' && (
           <CustomButton
             disable={false}
             title="Sign In"
@@ -495,6 +474,26 @@ const handleLogin = async () => {
             bordRadius={scale(12)}
             onPress={handleLogin}
           />
+        )} */}
+        {mode === 'email' && (
+          <View style={styles.signInButtonContainer}>
+            <CustomButton
+              disable={loading}
+              title={loading ? '' : 'Sign In'}
+              topHeight={0}
+              bgColor={ColorConstants.BTNCOLOR}
+              fontsize={14}
+              fontfamily={Fontconstants.SEMIBOLD}
+              bordRadius={scale(12)}
+              onPress={handleLogin}
+            />
+
+            {loading && (
+              <View pointerEvents="none" style={styles.signInLoaderContainer}>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              </View>
+            )}
+          </View>
         )}
         {showOTP && mode === 'mobile' && (
           <CustomButton
@@ -630,5 +629,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Fontconstants.BOLD,
     color: ColorConstants.BTNCOLOR,
+  },
+  signInButtonContainer: {
+    position: 'relative',
+    marginTop: scale(22),
+  },
+
+  signInLoaderContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
