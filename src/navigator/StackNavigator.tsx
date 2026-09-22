@@ -7,6 +7,7 @@ import Signup from '../screens/auth/signup/Signup';
 import LoginScreen from '../screens/auth/signIn/LoginScreen';
 import Otp from '../screens/auth/otp/Otp';
 import BottomTabNavigator from './BottomTabNavigator';
+import FamilyMembersScreen from '../screens/patient/profile/familyMembers/FamilyMembers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -22,7 +23,10 @@ const StackNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isLoggedIn ? (
-        <Stack.Screen name="PatientTabs" component={BottomTabNavigator} />
+        <>
+          <Stack.Screen name="PatientTabs" component={BottomTabNavigator} />
+          <Stack.Screen name="FamilyMembers" component={FamilyMembersScreen} />
+        </>
       ) : (
         <>
           <Stack.Screen name="LoginScreen" component={LoginScreen} />
