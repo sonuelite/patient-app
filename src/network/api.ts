@@ -70,10 +70,17 @@ export interface PatientSigninData {
   password: string;
 }
 
+export interface PatientSigninResponse {
+  success: boolean;
+  message?: string;
+  accessToken?: string;
+  data?: { accessToken?: string };
+}
+
 export const patientSignin = async (
   data: PatientSigninData,
 ) => {
-  const response = await axios.post(
+  const response = await axios.post<PatientSigninResponse>(
     `${API_BASE_URL}/api/v1/patient/patientSignin`,
     data,
     {
@@ -98,7 +105,8 @@ export interface VerifyPatientPhoneData {
 export interface VerifyPatientPhoneResponse {
   success: boolean;
   message?: string;
-  data?: unknown;
+  isValid?: boolean;
+  data?: { phone?: string };
 }
 
 export const verifyPatientPhone = async (

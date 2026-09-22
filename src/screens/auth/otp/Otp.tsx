@@ -10,9 +10,8 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from 'react-native';
-// import { useNavigation } from '@react-navigation/native';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp, useRoute } from '@react-navigation/native';
+import { useApp } from '../../../context/AppContext';
 
 import {
   Colors,
@@ -28,11 +27,10 @@ import { Fontconstants } from '../../../constants/fontConstants';
 import { showToast } from '../../../utils/toast';
 import { verifyPatientOtp } from '../../../network/api';
 
-type OTPNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Otp'>;
 type OTPRouteProp = RouteProp<RootStackParamList, 'Otp'>;
 
 const Otp = () => {
-  const navigation = useNavigation<OTPNavigationProp>();
+  const { completeLogin } = useApp();
   const route = useRoute<OTPRouteProp>();
 
   const { phone } = route.params;
@@ -42,7 +40,7 @@ const Otp = () => {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [verifyLoading, setVerifyLoading] = useState(false);
 
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const isKeyboardVisibleRef = useRef(false);
 
   /**
@@ -94,16 +92,6 @@ const Otp = () => {
   /**
    * Verify OTP
    */
-  // const handleVerify = () => {
-  //   if (otp.length !== 6) {
-  //     console.log('Please enter a valid OTP');
-  //     return;
-  //   }
-
-  //   console.log('OTP:', otp);
-  //   navigation.replace('PatientTabs');
-  // };
-
   const handleVerify = async () => {
     if (otp.length !== 6) {
       showToast('Please enter a valid 6-digit OTP', 'error');
@@ -122,16 +110,16 @@ const Otp = () => {
         otp,
       });
 
-      console.log('Verify OTP response:', response);
-
       if (!response?.success || response?.isValid === false) {
         showToast(response?.message || 'Invalid OTP', 'error');
         return;
       }
 
+      const accessToken = response.data?.accessToken ?? response.accessToken;
+      await completeLogin(accessToken);
+
       showToast(response?.message || 'OTP verified successfully', 'success');
 
-      navigation.replace('PatientTabs');
     } catch (error: any) {
       console.log('Verify OTP error:', error?.response?.data || error?.message);
 

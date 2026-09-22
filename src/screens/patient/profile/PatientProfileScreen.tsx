@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -46,8 +46,12 @@ export default function PatientProfileScreen() {
     currentPatientId,
     patients,
     logout,
+    showToast,
     medicationReminders,
   } = useApp();
+
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const logoutPending = useRef(false);
 
   const patient =
     patients.find(p => p.id === currentPatientId) || patients[0];
@@ -109,6 +113,13 @@ export default function PatientProfileScreen() {
   ];
 
   const handleLogout = () => {
+    if (logoutPending.current) { return; }
+    logoutPending.current = true;
+    setLogoutLoading(true);
+    const finishLogout = () => {
+      logoutPending.current = false;
+      setLogoutLoading(false);
+    };
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -116,20 +127,23 @@ export default function PatientProfileScreen() {
         {
           text: 'Cancel',
           style: 'cancel',
+          onPress: finishLogout,
         },
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => {
-            logout();
-
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Welcome' }],
-            });
+          onPress: async () => {
+            try {
+              await logout();
+            } catch {
+              showToast('Unable to log out. Please try again.', 'error');
+            } finally {
+              finishLogout();
+            }
           },
         },
       ],
+      { cancelable: false },
     );
   };
 
@@ -264,6 +278,7 @@ export default function PatientProfileScreen() {
           <TouchableOpacity
             style={styles.logoutBtn}
             onPress={handleLogout}
+            disabled={logoutLoading}
             activeOpacity={0.7}
           >
             <LogOut
@@ -272,7 +287,7 @@ export default function PatientProfileScreen() {
             />
 
             <Text style={styles.logoutText}>
-              Logout
+              {logoutLoading ? 'Logging out...' : 'Logout'}
             </Text>
           </TouchableOpacity>
 

@@ -25,16 +25,13 @@ import {
   Shadows,
 } from '../../../constants/theme';
 
-import { Input, Chip } from '../../../components/input/Input';
+import { Input } from '../../../components/input/Input';
 
 import {
-  HeartPulse,
   Mail,
   Phone,
   Lock,
-  ChevronLeft,
 } from 'lucide-react-native';
-import { UserRole } from '../../../types';
 import { showToast } from '../../../utils/toast';
 import type { RootStackParamList } from '../../../types';
 import CustomButton from '../../../components/customButton/CustomButton';
@@ -44,7 +41,7 @@ import { scale } from '../../../utils/scale';
 import BackHeader from '../../../components/backHeader/BackHeader';
 import Divider from '../../../components/divider/Divider';
 import { patientSignin, verifyPatientPhone } from '../../../network/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useApp } from '../../../context/AppContext';
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'LoginScreen'
@@ -52,6 +49,7 @@ type LoginScreenNavigationProp = NativeStackNavigationProp<
 
 export default function LoginScreen() {
   const navigation = useNavigation<LoginScreenNavigationProp>();
+  const { completeLogin } = useApp();
 
   const insets = useSafeAreaInsets();
 
@@ -65,186 +63,6 @@ export default function LoginScreen() {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
-
-  const navigateAfterLogin = () => {
-    // if (selectedRole === 'patient') {
-    //   navigation.replace('PatientTabs');
-    // } else if (selectedRole === 'doctor') {
-    //   navigation.replace('DoctorTabs');
-    // } else {
-    //   navigation.replace('AdminTabs');
-    // }
-  };
-
-  //   const dispatch = useDispatch();
-
-  //   const handleLogin = async () => {
-  //     console.log('In handleLogin');
-
-  //     if (mode === 'email' && !email) {
-  //       showToast('Please enter your email', 'error');
-  //       return;
-  //     }
-
-  //     if (mode === 'mobile' && !mobile) {
-  //       showToast('Please enter your mobile number', 'error');
-  //       return;
-  //     }
-
-  //     if (!password && !showOTP && mode === 'email') {
-  //       showToast('Please enter your password', 'error');
-  //       return;
-  //     }
-
-  //     // OTP verification
-  //     if (showOTP) {
-  //       if (otp.length !== 4) {
-  //         showToast('Please enter the 4-digit OTP', 'error');
-  //         return;
-  //       }
-
-  //       showToast('Login successful!', 'success');
-  //       navigateAfterLogin();
-  //       return;
-  //     }
-
-  //     // Email login
-  //     if (mode === 'email') {
-  //       console.log('In mode === email');
-
-  //       try {
-  //         // Same encryption as Angular web application
-  //         const encryptedEmail = CryptoJS.AES.encrypt(
-  //           email,
-  //           'email'
-  //         ).toString();
-
-  //         const encryptedPassword = CryptoJS.AES.encrypt(
-  //           password,
-  //           'password'
-  //         ).toString();
-
-  //         console.log('Encrypted Email:', encryptedEmail);
-  //         console.log('Encrypted Password:', encryptedPassword);
-
-  //         const response = await loginUser({
-  //           encryptedEmail,
-  //           encryptedPassword,
-  //         });
-
-  //         console.log('LOGIN RESPONSE:', response);
-
-  //         // showToast('Login successful!', 'success');
-
-  //         const accessToken = response?.accessToken;
-  //         if (accessToken) {
-  //           dispatch(setAccessToken(accessToken));
-
-  //           console.log('Access token saved in Redux');
-
-  //           // navigation.replace('PatientTabs');
-  //           navigateAfterLogin();
-  //         }
-
-  //       } catch (error: any) {
-  //         console.log('LOGIN ERROR:', error);
-
-  //         showToast(
-  //           error?.response?.data?.message || 'Login failed',
-  //           'error'
-  //         );
-  //       }
-  //     }
-  //   };
-
-  //   const handleLogin = () => {
-  //     console.log('handleLoginFunction');
-  //   };
-
-  // const handleLogin = async () => {
-  //   console.log("In handleLogin");
-
-  //   const normalizedEmail = email.trim().toLowerCase();
-
-  //   if (!normalizedEmail) {
-  //     showToast('Please enter your email address', 'error');
-  //     return;
-  //   }
-
-  //   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  //   if (!emailPattern.test(normalizedEmail)) {
-  //     showToast('Please enter a valid email address', 'error');
-  //     return;
-  //   }
-
-  //   if (!password.trim()) {
-  //     showToast('Please enter your password', 'error');
-  //     return;
-  //   }
-
-  //   if (loading) {
-  //     return;
-  //   }
-
-  //   try {
-  //     setLoading(true);
-
-  //     const response = await patientSignin({
-  //       email: normalizedEmail,
-  //       password,
-  //     });
-
-  //     console.log("patientSignInResponse->",response);
-
-  //     if (!response.success) {
-  //       showToast(
-  //         response.message || 'Unable to sign in',
-  //         'error',
-  //       );
-  //       return;
-  //     }
-
-  //     const accessToken =
-  //       response.data?.accessToken || response.accessToken;
-
-  //     if (!accessToken) {
-  //       showToast(
-  //         'Access token was not received from the server',
-  //         'error',
-  //       );
-  //       return;
-  //     }
-
-  //     await AsyncStorage.setItem(
-  //       'access_token',
-  //       accessToken,
-  //     );
-
-  //     showToast(
-  //       response.message || 'Login successful',
-  //       'success',
-  //     );
-
-  //     navigation.replace('PatientTabs');
-  //   } catch (error: any) {
-  //   console.log(
-  //     'Patient sign-in error response:',
-  //     JSON.stringify(error.response?.data, null, 2),
-  //   );
-
-  //   console.log('Status code:', error.response?.status);
-
-  //   const message =
-  //     error.response?.data?.message ||
-  //     error.response?.data?.error ||
-  //     'Invalid email or password';
-
-  //   showToast(message, 'error');
-  // } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   const handleLogin = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -279,8 +97,6 @@ export default function LoginScreen() {
         password: normalizedPassword,
       });
 
-      console.log('Patient sign-in response:', response);
-
       if (!response?.success) {
         showToast(response?.message || 'Unable to sign in', 'error');
         return;
@@ -288,32 +104,15 @@ export default function LoginScreen() {
 
       const accessToken = response?.data?.accessToken || response?.accessToken;
 
-      if (!accessToken) {
+      if (typeof accessToken !== 'string' || !accessToken.trim()) {
         showToast('Access token was not received from the server', 'error');
         return;
       }
 
-      // Save only the access token
-      await AsyncStorage.setItem('access_token', accessToken);
-
-      // Verify that the access token was saved
-      const savedAccessToken = await AsyncStorage.getItem('access_token');
-
-      console.log('savedAccessToken->', savedAccessToken);
-
-      if (!savedAccessToken) {
-        showToast('Access token could not be saved', 'error');
-        return;
-      }
-
-      console.log(
-        'Access token saved successfully:',
-        Boolean(savedAccessToken),
-      );
+      await completeLogin(accessToken);
 
       showToast(response?.message || 'Login successful', 'success');
 
-      navigation.replace('PatientTabs');
     } catch (error: any) {
       console.log(
         'Patient sign-in error:',
@@ -335,6 +134,7 @@ export default function LoginScreen() {
   };
 
 const handleSendOtp = async () => {
+  if (otpLoading) { return; }
   const phone = mobile.trim();
 
   if (!/^\d{10}$/.test(phone)) {
@@ -491,8 +291,8 @@ const handleSendOtp = async () => {
 
         {mode === 'mobile' && !showOTP && (
           <CustomButton
-            disable={false}
-            title="Send OTP"
+            disable={otpLoading}
+            title={otpLoading ? 'Sending...' : 'Send OTP'}
             topHeight={22}
             bgColor={ColorConstants.BTNCOLOR}
             fontsize={14}

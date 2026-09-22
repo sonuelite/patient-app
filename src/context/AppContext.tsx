@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useCallback,
+  useEffect,
   ReactNode,
 } from 'react';
 
@@ -28,6 +29,7 @@ import type {
   IPDAdmission,
 } from '../types';
 import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // import * as mock from '../data/mockData';
 import * as mock from '../data/mockData';
 
@@ -35,7 +37,10 @@ interface AppContextType {
   user: User | null;
 
   login: (role: UserRole) => void;
-  logout: () => void;
+  isLoggedIn: boolean;
+  authLoading: boolean;
+  completeLogin: (token?: string) => Promise<void>;
+  logout: () => Promise<void>;
 
   currentPatientId: string;
   setCurrentPatientId: (id: string) => void;
@@ -187,6 +192,8 @@ export function AppProvider({
   children: ReactNode;
 }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [currentPatientId, setCurrentPatientId] =
     useState('PAT-001');
@@ -286,9 +293,59 @@ export function AppProvider({
     }
   }, []);
 
-  const logout = useCallback(() => {
+  useEffect(() => {
+    let active = true;
+    const restoreSession = async () => {
+      try {
+        const [status, token] = await Promise.all([
+          AsyncStorage.getItem('is_logged_in'),
+          AsyncStorage.getItem('access_token'),
+        ]);
+        // Successful tokenless OTP verification also creates a local session.
+        const valid = status === 'true' &&
+          (token === null || token.trim().length > 0);
+        if (active && valid) {
+          login('patient');
+          setIsLoggedIn(true);
+        }
+      } catch {
+        if (active) {
+          showToast('Unable to restore your session. Please sign in again.', 'error');
+        }
+      } finally {
+        if (active) {
+          setAuthLoading(false);
+        }
+      }
+    };
+    void restoreSession();
+    return () => {
+      active = false;
+    };
+  }, [login, showToast]);
+
+  const completeLogin = useCallback(async (token?: string) => {
+    if (token !== undefined && (typeof token !== 'string' || !token.trim())) {
+      throw new Error('Invalid access token received from the server');
+    }
+    // Write the login flag last so a failed token write cannot restore a session.
+    await AsyncStorage.removeItem('is_logged_in');
+    if (token !== undefined) {
+      await AsyncStorage.setItem('access_token', token.trim());
+    } else {
+      await AsyncStorage.removeItem('access_token');
+    }
+    await AsyncStorage.setItem('is_logged_in', 'true');
+    login('patient');
+    setIsLoggedIn(true);
+  }, [login]);
+
+  const logout = useCallback(async () => {
+    await AsyncStorage.removeItem('is_logged_in');
+    await AsyncStorage.removeItem('access_token');
     setUser(null);
     setCurrentPatientId('PAT-001');
+    setIsLoggedIn(false);
   }, []);
 
   // -------------------------
@@ -935,7 +992,7 @@ export function AppProvider({
                 ...bed,
                 status: 'occupied' as const,
                 patientId,
-                patientName: prev.find(
+                patientName: patients.find(
                   patient =>
                     patient.id === patientId
                 )?.name,
@@ -961,7 +1018,7 @@ export function AppProvider({
         ...prev,
       ]);
     },
-    []
+    [patients]
   );
 
   // -------------------------
@@ -1026,6 +1083,9 @@ export function AppProvider({
     <AppContext.Provider
       value={{
         user,
+        isLoggedIn,
+        authLoading,
+        completeLogin,
         login,
         logout,
 
