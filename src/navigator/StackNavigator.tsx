@@ -1,6 +1,9 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { useApp } from '../context/AppContext';
+import {useAppDispatch, useAppSelector} from '../store/hooks';
+import {selectAuthLoading, selectIsLoggedIn} from '../store/selectors';
+import {restoreAuth} from '../store/authSlice';
+import {showToast} from '../utils/toast';
 import type { RootStackParamList } from '../types';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Signup from '../screens/auth/signup/Signup';
@@ -8,11 +11,23 @@ import LoginScreen from '../screens/auth/signIn/LoginScreen';
 import Otp from '../screens/auth/otp/Otp';
 import BottomTabNavigator from './BottomTabNavigator';
 import FamilyMembersScreen from '../screens/patient/profile/familyMembers/FamilyMembers';
+import FindDoctorScreen from '../screens/quickActions/bookVisit/FindDoctorScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const StackNavigator = () => {
-  const { authLoading, isLoggedIn } = useApp();
+  const dispatch = useAppDispatch();
+  const authLoading = useAppSelector(selectAuthLoading);
+  const isLoggedIn = useAppSelector(selectIsLoggedIn);
+  useEffect(() => {
+    const restore = async () => {
+      const result = await dispatch(restoreAuth());
+      if (restoreAuth.rejected.match(result) && !result.meta.condition) {
+        showToast(result.payload || 'Unable to restore your session', 'error');
+      }
+    };
+    restore();
+  }, [dispatch]);
   if (authLoading) {
     return (
       <View style={styles.loading}>
@@ -26,6 +41,7 @@ const StackNavigator = () => {
         <>
           <Stack.Screen name="PatientTabs" component={BottomTabNavigator} />
           <Stack.Screen name="FamilyMembers" component={FamilyMembersScreen} />
+          <Stack.Screen name="FindDoctor" component={FindDoctorScreen} />
         </>
       ) : (
         <>

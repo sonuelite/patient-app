@@ -4,12 +4,18 @@ import LoginScreen from '../src/screens/auth/signIn/LoginScreen';
 import Otp from '../src/screens/auth/otp/Otp';
 import { TextInput } from 'react-native';
 import { patientSignin, verifyPatientOtp } from '../src/network/api';
-import { useApp } from '../src/context/AppContext';
+import {Provider} from 'react-redux';
+import {createAppStore} from '../src/store';
+import {session} from '../testUtils/auth';
 
 // The first React Native render can include lazy module transforms on CI.
 jest.setTimeout(15000);
 
-jest.mock('../src/context/AppContext', () => ({ useApp: jest.fn() }));
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(async () => null),
+  setItem: jest.fn(async () => undefined),
+  removeItem: jest.fn(async () => undefined),
+}));
 jest.mock('../src/network/api', () => ({
   patientSignin: jest.fn(), verifyPatientOtp: jest.fn(), verifyPatientPhone: jest.fn(),
 }));
@@ -31,16 +37,15 @@ jest.mock('../src/components/customButton/CustomButton', () => (props: object) =
   require('react').createElement('button', props));
 
 let root: ReactTestRenderer;
-const completeLogin = jest.fn();
+let appStore = createAppStore();
 beforeEach(() => {
   jest.clearAllMocks();
-  completeLogin.mockResolvedValue(undefined);
-  (useApp as jest.Mock).mockReturnValue({ completeLogin });
+  appStore = createAppStore();
 });
 afterEach(async () => { if (root) { await act(async () => root.unmount()); } });
 
 async function submitEmail() {
-  await act(async () => { root = create(<LoginScreen />); });
+  await act(async () => { root = create(<Provider store={appStore}><LoginScreen /></Provider>); });
   await act(async () => {
     const inputs = root.root.findAllByType('input');
     inputs.find(node => node.props.label === 'Email Address')!.props.onChangeText('patient@example.com');
@@ -52,25 +57,28 @@ async function submitEmail() {
 }
 
 test.each([
-  { success: true, accessToken: 'email-token' },
-  { success: true, data: { accessToken: 'email-token' } },
+  { success: true, accessToken: 'email-token', data: session.patient },
+  { success: true, data: { ...session.patient, accessToken: 'email-token' } },
 ])('email success completes the session with a real token (%j)', async response => {
   (patientSignin as jest.Mock).mockResolvedValue(response);
   await submitEmail();
-  expect(completeLogin).toHaveBeenCalledWith('email-token');
+  expect(appStore.getState().auth).toMatchObject({
+    accessToken: 'email-token', patient: session.patient, isLoggedIn: true,
+  });
 });
 
 test.each([
   { success: false }, { success: true },
   { success: true, accessToken: '   ' },
+  { success: true, data: { accessToken: 'token-without-profile' } },
 ])('invalid email response stays signed out (%j)', async response => {
   (patientSignin as jest.Mock).mockResolvedValue(response);
   await submitEmail();
-  expect(completeLogin).not.toHaveBeenCalled();
+  expect(appStore.getState().auth.isLoggedIn).toBe(false);
 });
 
 async function submitOtp() {
-  await act(async () => { root = create(<Otp />); });
+  await act(async () => { root = create(<Provider store={appStore}><Otp /></Provider>); });
   await act(async () => { root.root.findByType(TextInput).props.onChangeText('123456'); });
   await act(async () => {
     await root.root.findAllByType('button').find(node => node.props.title === 'Verify')!.props.onPress();
@@ -78,19 +86,24 @@ async function submitOtp() {
 }
 
 test.each([
-  [{ success: true, accessToken: 'otp-token' }, 'otp-token'],
-  [{ success: true, data: { accessToken: 'otp-token' } }, 'otp-token'],
-  [{ success: true, isValid: true }, undefined],
+  [{ success: true, accessToken: 'otp-token', data: session.patient }, 'otp-token'],
+  [{ success: true, data: { ...session.patient, accessToken: 'otp-token' } }, 'otp-token'],
 ])('verified OTP completes the session (%j)', async (response, token) => {
   (verifyPatientOtp as jest.Mock).mockResolvedValue(response);
   await submitOtp();
-  expect(completeLogin).toHaveBeenCalledWith(token);
+  expect(appStore.getState().auth).toMatchObject({
+    accessToken: token, patient: session.patient, isLoggedIn: true,
+  });
 });
 
-test.each([{ success: false }, { success: true, isValid: false }])(
+test.each([
+  { success: false }, { success: true, isValid: false },
+  {success: true, isValid: true},
+  {success: true, data: {accessToken: 'token-without-profile'}},
+])(
   'invalid OTP stays signed out (%j)', async response => {
     (verifyPatientOtp as jest.Mock).mockResolvedValue(response);
     await submitOtp();
-    expect(completeLogin).not.toHaveBeenCalled();
+    expect(appStore.getState().auth.isLoggedIn).toBe(false);
   },
 );

@@ -11,7 +11,10 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
-import { useApp } from '../../../context/AppContext';
+import {useAppDispatch} from '../../../store/hooks';
+import {completeLogin} from '../../../store/authSlice';
+import {sessionFromLogin} from '../../../types/auth';
+import {getErrorMessage} from '../../../utils/apiError';
 
 import {
   Colors,
@@ -30,7 +33,7 @@ import { verifyPatientOtp } from '../../../network/api';
 type OTPRouteProp = RouteProp<RootStackParamList, 'Otp'>;
 
 const Otp = () => {
-  const { completeLogin } = useApp();
+  const dispatch = useAppDispatch();
   const route = useRoute<OTPRouteProp>();
 
   const { phone } = route.params;
@@ -115,18 +118,13 @@ const Otp = () => {
         return;
       }
 
-      const accessToken = response.data?.accessToken ?? response.accessToken;
-      await completeLogin(accessToken);
+      await dispatch(completeLogin(sessionFromLogin(response))).unwrap();
 
       showToast(response?.message || 'OTP verified successfully', 'success');
 
-    } catch (error: any) {
-      console.log('Verify OTP error:', error?.response?.data || error?.message);
-
+    } catch (error: unknown) {
       showToast(
-        error?.response?.data?.message ||
-          error?.response?.data?.error ||
-          'Unable to verify OTP',
+        getErrorMessage(error, 'Unable to verify OTP'),
         'error',
       );
     } finally {

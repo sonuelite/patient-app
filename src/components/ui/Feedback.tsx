@@ -130,6 +130,7 @@ interface BottomSheetProps {
   title?: string;
   children: React.ReactNode;
   height?: DimensionValue;
+  dismissible?: boolean;
 }
 
 export function BottomSheet({
@@ -138,6 +139,7 @@ export function BottomSheet({
   title,
   children,
   height = '60%',
+  dismissible = true,
 }: BottomSheetProps) {
   const slideAnimation = useRef(
     new Animated.Value(600),
@@ -156,6 +158,7 @@ export function BottomSheet({
   }, [visible, slideAnimation]);
 
   const handleClose = () => {
+    if (!dismissible) { return; }
     Animated.timing(slideAnimation, {
       toValue: 600,
       duration: 200,

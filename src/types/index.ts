@@ -14,6 +14,11 @@ export type RootStackParamList = {
     // DoctorTabs: undefined;
     // AdminTabs: undefined;
     FamilyMembers: undefined;
+      FindDoctor: undefined;
+
+    DoctorProfile: {
+      doctorId: string;
+    };
 };
 
 export type UserRole = 'patient' | 'doctor' | 'admin';

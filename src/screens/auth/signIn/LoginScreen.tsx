@@ -41,7 +41,10 @@ import { scale } from '../../../utils/scale';
 import BackHeader from '../../../components/backHeader/BackHeader';
 import Divider from '../../../components/divider/Divider';
 import { patientSignin, verifyPatientPhone } from '../../../network/api';
-import { useApp } from '../../../context/AppContext';
+import {useAppDispatch} from '../../../store/hooks';
+import {completeLogin} from '../../../store/authSlice';
+import {sessionFromLogin} from '../../../types/auth';
+import {getErrorMessage} from '../../../utils/apiError';
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'LoginScreen'
@@ -49,7 +52,7 @@ type LoginScreenNavigationProp = NativeStackNavigationProp<
 
 export default function LoginScreen() {
   const navigation = useNavigation<LoginScreenNavigationProp>();
-  const { completeLogin } = useApp();
+  const dispatch = useAppDispatch();
 
   const insets = useSafeAreaInsets();
 
@@ -96,7 +99,7 @@ export default function LoginScreen() {
         email: normalizedEmail,
         password: normalizedPassword,
       });
-
+      console.log('Login response:', response)
       if (!response?.success) {
         showToast(response?.message || 'Unable to sign in', 'error');
         return;
@@ -109,25 +112,12 @@ export default function LoginScreen() {
         return;
       }
 
-      await completeLogin(accessToken);
+      await dispatch(completeLogin(sessionFromLogin(response))).unwrap();
 
       showToast(response?.message || 'Login successful', 'success');
 
-    } catch (error: any) {
-      console.log(
-        'Patient sign-in error:',
-        JSON.stringify(error?.response?.data || error?.message, null, 2),
-      );
-
-      console.log('Patient sign-in status:', error?.response?.status);
-
-      const message =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        error?.message ||
-        'Invalid email or password';
-
-      showToast(message, 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Invalid email or password'), 'error');
     } finally {
       setLoading(false);
     }
@@ -152,7 +142,6 @@ const handleSendOtp = async () => {
       phone,
     });
 
-    console.log('MobileVerify response:', response);
 
     if (!response?.success || !response?.isValid) {
       showToast(
@@ -170,10 +159,9 @@ const handleSendOtp = async () => {
     navigation.navigate('Otp', {
       phone: response.data?.phone || phone,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     showToast(
-      error?.response?.data?.message ||
-        'Unable to verify phone number',
+      getErrorMessage(error, 'Unable to verify phone number'),
       'error',
     );
   } finally {

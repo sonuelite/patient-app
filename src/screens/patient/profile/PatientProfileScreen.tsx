@@ -9,6 +9,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RootStackParamList} from '../../../types';
+import {useAppDispatch, useAppSelector} from '../../../store/hooks';
+import {selectPatient} from '../../../store/selectors';
+import {logout} from '../../../store/authSlice';
 
 import {
   Colors,
@@ -38,14 +43,21 @@ import {
 
 import { useApp } from '../../../context/AppContext';
 
+type ProfileRoutes = RootStackParamList & {
+  ProfileDetail: undefined;
+  MedicationReminders: undefined;
+  Notifications: undefined;
+};
+
 export default function PatientProfileScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileRoutes>>();
+  const dispatch = useAppDispatch();
+  const authPatient = useAppSelector(selectPatient);
 
   const {
     currentPatientId,
     patients,
-    logout,
     showToast,
     medicationReminders,
   } = useApp();
@@ -53,10 +65,18 @@ export default function PatientProfileScreen() {
   const [logoutLoading, setLogoutLoading] = useState(false);
   const logoutPending = useRef(false);
 
-  const patient =
-    patients.find(p => p.id === currentPatientId) || patients[0];
+  const patient = patients.find(p => p.id === currentPatientId);
+  const account = authPatient && String(authPatient.patient_id) === currentPatientId
+    ? authPatient : null;
+  const profileName = account
+    ? `${account.first_name} ${account.last_name}`.trim()
+    : patient?.name ?? 'Patient';
 
-  const menuItems = [
+  const menuItems: Array<{
+    icon: typeof User; label: string;
+    route: 'ProfileDetail' | 'FamilyMembers' | 'MedicationReminders' | 'Notifications';
+    badge?: number;
+  }> = [
     {
       icon: User,
       label: 'Personal Information',
@@ -87,7 +107,7 @@ export default function PatientProfileScreen() {
       label: 'Medication Reminders',
       route: 'MedicationReminders',
       badge: medicationReminders.filter(
-        r => r.patientId === patient.id && r.active,
+        r => r.patientId === currentPatientId && r.active,
       ).length,
     },
     {
@@ -134,7 +154,7 @@ export default function PatientProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await logout();
+              await dispatch(logout()).unwrap();
             } catch {
               showToast('Unable to log out. Please try again.', 'error');
             } finally {
@@ -165,22 +185,24 @@ export default function PatientProfileScreen() {
         >
           <View style={styles.profileRow}>
             <Avatar
-              uri={patient.photo}
+              uri={account ? account.photo ?? undefined : patient?.photo}
               size={72}
-              name={patient.name}
+              name={profileName}
             />
 
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>
-                {patient.name}
+                {profileName}
               </Text>
 
               <Text style={styles.profileId}>
-                {patient.id} · {patient.gender}, {patient.age}y
+                {account?.uhid ?? patient?.id ?? 'Profile unavailable'}
+                {' · '}{account?.gender ?? patient?.gender ?? '—'}
+                {!account && patient ? `, ${patient.age}y` : ''}
               </Text>
 
               <Text style={styles.profileBlood}>
-                Blood: {patient.bloodGroup}
+                Blood: {account ? '—' : patient?.bloodGroup ?? '—'}
               </Text>
             </View>
           </View>
@@ -193,7 +215,7 @@ export default function PatientProfileScreen() {
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {patient.vitals.length}
+                {account ? '—' : patient?.vitals.length ?? '—'}
               </Text>
 
               <Text style={styles.statLabel}>
@@ -205,7 +227,7 @@ export default function PatientProfileScreen() {
 
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {patient.conditions.length}
+                {account ? '—' : patient?.conditions.length ?? '—'}
               </Text>
 
               <Text style={styles.statLabel}>
@@ -217,7 +239,7 @@ export default function PatientProfileScreen() {
 
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {patient.familyMembers.length}
+                {account ? '—' : patient?.familyMembers.length ?? '—'}
               </Text>
 
               <Text style={styles.statLabel}>

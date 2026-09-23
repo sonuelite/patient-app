@@ -1,7 +1,78 @@
-import axios from 'axios';
+import {apiClient, publicClient} from './client';
+import type {PatientLoginResponse} from '../types/auth';
+export {apiClient} from './client';
 
-const API_BASE_URL =
-  'https://hims-api.zynotechnologies.com';
+export interface RelatedPatient {
+  patient_id: number;
+  uuid: string;
+  uhid: string;
+  first_name: string;
+  last_name: string;
+  gender: string;
+  photo: string | null;
+  relation_of: string;
+  parent_patient_id: number | null;
+  is_main_patient: boolean;
+  email: string | null;
+  phone: string | null;
+  status: string;
+}
+
+interface RelatedPatientsResponse {
+  success: boolean;
+  message?: string;
+  data: RelatedPatient[];
+}
+
+export async function getAllRelatedPatients(
+  patientId: number,
+  signal?: AbortSignal,
+): Promise<RelatedPatient[]> {
+  const response = await apiClient.get<RelatedPatientsResponse>(
+    `/api/v1/patient/getAllRelatedPatients/${patientId}`,
+    {signal},
+  );
+  if (!response.data.success || !Array.isArray(response.data.data)) {
+    throw new Error(response.data.message || 'Unable to load family members');
+  }
+  return response.data.data;
+}
+
+export interface AddFamilyMemberData {
+  parentPatientId: number;
+  firstName: string;
+  lastName: string;
+  dob: string;
+  gender: 'Male' | 'Female' | 'Other';
+  relationOf: string;
+}
+
+export interface AddFamilyMemberResponse {
+  success?: boolean;
+  message?: string;
+  data?: unknown;
+}
+
+export async function addFamilyMember(
+  data: AddFamilyMemberData,
+): Promise<AddFamilyMemberResponse> {
+  const formData = new FormData();
+  formData.append('parentPatientId', String(data.parentPatientId));
+  formData.append('firstName', data.firstName.trim());
+  formData.append('lastName', data.lastName.trim());
+  formData.append('dob', data.dob.trim());
+  formData.append('gender', data.gender);
+  formData.append('relationOf', data.relationOf.trim());
+
+  const response = await apiClient.post<AddFamilyMemberResponse>(
+    '/api/v1/patient/addFamilyMember', formData,
+    {headers: {'Content-Type': 'multipart/form-data'}},
+  );
+  if (response.data.success === false) {
+    throw new Error(response.data.message || 'Unable to add family member');
+  }
+  return response.data;
+}
 
 // ==============================
 // Register Patient
@@ -24,6 +95,7 @@ export interface RegisterPatientData {
 
 export const registerPatient = async (
   data: RegisterPatientData,
+  entityId?: string,
 ) => {
   const formData = new FormData();
 
@@ -42,16 +114,16 @@ export const registerPatient = async (
         uri: data.photo.uri,
         type: data.photo.type,
         name: data.photo.name,
-      } as any,
+      },
     );
   }
 
-  const response = await axios.post(
-    `${API_BASE_URL}/api/v1/patient/register_patient`,
+  const response = await publicClient.post<{success?: boolean; message?: string}>(
+    '/api/v1/patient/register_patient',
     formData,
     {
       headers: {
-        'x-entity-id': '1',
+        ...(entityId ? {'x-entity-id': entityId} : {}),
         'Content-Type': 'multipart/form-data',
       },
       timeout: 30000,
@@ -70,18 +142,13 @@ export interface PatientSigninData {
   password: string;
 }
 
-export interface PatientSigninResponse {
-  success: boolean;
-  message?: string;
-  accessToken?: string;
-  data?: { accessToken?: string };
-}
+export type PatientSigninResponse = PatientLoginResponse;
 
 export const patientSignin = async (
   data: PatientSigninData,
 ) => {
-  const response = await axios.post<PatientSigninResponse>(
-    `${API_BASE_URL}/api/v1/patient/patientSignin`,
+  const response = await publicClient.post<PatientSigninResponse>(
+    '/api/v1/patient/patientSignin',
     data,
     {
       headers: {
@@ -113,8 +180,8 @@ export const verifyPatientPhone = async (
   data: VerifyPatientPhoneData,
 ): Promise<VerifyPatientPhoneResponse> => {
   const response =
-    await axios.post<VerifyPatientPhoneResponse>(
-      `${API_BASE_URL}/api/v1/patient/verifyPhone`,
+    await publicClient.post<VerifyPatientPhoneResponse>(
+      '/api/v1/patient/verifyPhone',
       data,
       {
         headers: {
@@ -132,22 +199,13 @@ export interface VerifyOtpData {
   otp: string;
 }
 
-export interface VerifyOtpResponse {
-  success: boolean;
-  message?: string;
-  isValid?: boolean;
-  data?: {
-    accessToken?: string;
-    [key: string]: unknown;
-  };
-  accessToken?: string;
-}
+export type VerifyOtpResponse = PatientLoginResponse;
 
 export const verifyPatientOtp = async (
   data: VerifyOtpData,
 ): Promise<VerifyOtpResponse> => {
-  const response = await axios.post<VerifyOtpResponse>(
-    `${API_BASE_URL}/api/v1/patient/verifyOtp`,
+  const response = await publicClient.post<VerifyOtpResponse>(
+    '/api/v1/patient/verifyOtp',
     data,
     {
       headers: {

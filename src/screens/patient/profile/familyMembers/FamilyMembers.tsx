@@ -1,12 +1,19 @@
-import React, {useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import Toast from 'react-native-toast-message';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {Plus, Users, Repeat} from 'lucide-react-native';
 
 import {
@@ -21,22 +28,168 @@ import { Avatar } from '../../../../components/ui/DataDisplay';
 import { ScreenHeader } from '../../../../components/screenHeader/ScreenHeader';
 import { BottomSheet } from '../../../../components/ui/Feedback';
 import { useApp } from '../../../../context/AppContext';
-import { Button } from '../../../../components/ui/Button';
+import {Chip, Input} from '../../../../components/input/Input';
+import CustomButton from '../../../../components/customButton/CustomButton';
+import {ColorConstants} from '../../../../constants/colorConstants';
+import {Fontconstants} from '../../../../constants/fontConstants';
+import {scale} from '../../../../utils/scale';
+import {showToast as showFormToast} from '../../../../utils/toast';
+import {addFamilyMember, getAllRelatedPatients} from '../../../../network/api';
+import type {RelatedPatient} from '../../../../network/api';
+import {getErrorMessage} from '../../../../utils/apiError';
+import {useAppSelector} from '../../../../store/hooks';
+import {selectAccessToken, selectEntityId, selectPatientId} from '../../../../store/selectors';
+
+interface FamilyMemberForm {
+  firstName: string;
+  lastName: string;
+  dob: string;
+  gender: 'Male' | 'Female' | 'Other';
+  relation: string;
+}
+
+const initialForm: FamilyMemberForm = {
+  firstName: '', lastName: '', dob: '', gender: 'Male', relation: '',
+};
 
 export default function FamilyMembersScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const parentPatientId = useAppSelector(selectPatientId);
+  const entityId = useAppSelector(selectEntityId);
+  const accessToken = useAppSelector(selectAccessToken);
+  const [saving, setSaving] = useState(false);
+  const submissionPending = useRef(false);
 
   const {
     currentPatientId,
-    patients,
     setCurrentPatientId,
     showToast,
   } = useApp();
 
-  const [showAdd, setShowAdd] = useState(false);
+  const [relatedPatients, setRelatedPatients] = useState<RelatedPatient[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const listRequest = useRef<AbortController | null>(null);
 
-  const patient =
-    patients.find(item => item.id === currentPatientId) ?? patients[0];
+  const loadMembers = useCallback(async () => {
+    listRequest.current?.abort();
+    const controller = new AbortController();
+    listRequest.current = controller;
+    if (parentPatientId === null || !accessToken) {
+      setRelatedPatients([]);
+      setLoadError('Please sign in again to view family members');
+      setLoadingMembers(false);
+      return;
+    }
+    setLoadingMembers(true);
+    setLoadError(null);
+    try {
+      const records = await getAllRelatedPatients(parentPatientId, controller.signal);
+      if (!controller.signal.aborted) { setRelatedPatients(records); }
+    } catch (error: unknown) {
+      if (!controller.signal.aborted) {
+        setLoadError(getErrorMessage(error, 'Unable to load family members'));
+      }
+    } finally {
+      if (!controller.signal.aborted) { setLoadingMembers(false); }
+    }
+  }, [parentPatientId, accessToken]);
+
+  useFocusEffect(useCallback(() => {
+    setRelatedPatients([]);
+    loadMembers();
+    return () => { listRequest.current?.abort(); };
+  }, [loadMembers]));
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (!showAdd && successMessage) {
+      showFormToast(successMessage, 'success');
+      setSuccessMessage(null);
+    }
+  }, [showAdd, successMessage]);
+  const [form, setForm] = useState<FamilyMemberForm>(initialForm);
+
+  const update = <K extends keyof FamilyMemberForm>(
+    key: K,
+    value: FamilyMemberForm[K],
+  ) => setForm(prev => ({...prev, [key]: value}));
+
+  const handleContinue = async () => {
+    if (submissionPending.current) { return; }
+    if (
+      !form.firstName.trim() ||
+      !form.lastName.trim() ||
+      !form.dob.trim() ||
+      !form.relation.trim()
+    ) {
+      showFormToast('Please fill all required fields', 'error');
+      return;
+    }
+
+    const dob = form.dob.trim();
+    const birthDate = new Date(`${dob}T00:00:00`);
+    const [year, month, day] = dob.split('-').map(Number);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(dob) ||
+      Number.isNaN(birthDate.getTime()) ||
+      birthDate.getFullYear() !== year ||
+      birthDate.getMonth() !== month - 1 ||
+      birthDate.getDate() !== day ||
+      birthDate > new Date()
+    ) {
+      showFormToast('Please enter a valid date of birth (YYYY-MM-DD)', 'error');
+      return;
+    }
+
+    if (parentPatientId === null || !accessToken) {
+      showFormToast('Please sign in again to add a family member', 'error');
+      return;
+    }
+    if (entityId === null) {
+      showFormToast('Please select an entity before adding a family member', 'error');
+      return;
+    }
+
+    submissionPending.current = true;
+    setSaving(true);
+    Keyboard.dismiss();
+    try {
+      const response = await addFamilyMember({
+        parentPatientId,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        dob,
+        gender: form.gender,
+        relationOf: form.relation,
+      });
+      console.log('Family member added successfully:', response);
+      setForm(initialForm);
+      setShowAdd(false);
+      setSuccessMessage(response.message || 'Family member added successfully');
+      await loadMembers();
+    } catch (error: unknown) {
+      showFormToast(getErrorMessage(error, 'Unable to add family member'), 'error');
+    } finally {
+      submissionPending.current = false;
+      setSaving(false);
+    }
+  };
+
+  const records = relatedPatients.map(item => ({
+    id: String(item.patient_id),
+    name: `${item.first_name} ${item.last_name}`.trim(),
+    photo: item.photo ?? undefined,
+    uhid: item.uhid,
+    relation: item.relation_of,
+    gender: item.gender,
+    status: item.status,
+  }));
+  const isSelf = (relation: string) => relation.trim().toLowerCase() === 'self';
+  const patient = records.find(item => isSelf(item.relation));
+  const familyMembers = records.filter(item => !isSelf(item.relation));
 
   const handleSwitchProfile = (familyMember: {
     id: string;
@@ -50,26 +203,6 @@ export default function FamilyMembersScreen() {
     );
   };
 
-  if (!patient) {
-    return (
-      <View style={styles.container}>
-        <ScreenHeader
-          title="Family Members"
-          showBack
-          onBackPress={() => navigation.goBack()}
-        />
-
-        <EmptyState
-          icon={<Users size={48} color={Colors.neutral[300]} />}
-          title="Patient not found"
-          message="Patient information is currently unavailable."
-        />
-      </View>
-    );
-  }
-
-  const familyMembers = patient.familyMembers ?? [];
-
   return (
     <View style={styles.container}>
       <ScreenHeader
@@ -81,8 +214,22 @@ export default function FamilyMembersScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={loadingMembers} onRefresh={loadMembers} />
+        }
         showsVerticalScrollIndicator={false}>
-        <Card style={styles.currentCard}>
+        {loadingMembers && records.length === 0 && (
+          <ActivityIndicator size="large" color={Colors.primary[600]} />
+        )}
+        {loadError && (
+          <EmptyState
+            icon={<Users size={48} color={Colors.neutral[300]} />}
+            title="Unable to load family members"
+            message={loadError}
+            action={{label: 'Retry', onPress: loadMembers}}
+          />
+        )}
+        {patient && <Card style={styles.currentCard}>
           <View style={styles.currentRow}>
             <Avatar
               uri={patient.photo}
@@ -96,19 +243,19 @@ export default function FamilyMembersScreen() {
               </Text>
 
               <Text style={styles.currentId}>
-                {patient.id} · Primary
+                {patient.uhid} · Primary
               </Text>
             </View>
 
-            <Badge label="Active" color="success" />
+            <Badge label={patient.status} color={patient.status.toLowerCase() === 'active' ? 'success' : 'neutral'} />
           </View>
-        </Card>
+        </Card>}
 
         <Text style={styles.sectionTitle}>
           Family Members ({familyMembers.length})
         </Text>
 
-        {familyMembers.length === 0 ? (
+        {familyMembers.length === 0 ? (!loadingMembers && !loadError && (
           <EmptyState
             icon={
               <Users
@@ -123,17 +270,13 @@ export default function FamilyMembersScreen() {
               onPress: () => setShowAdd(true),
             }}
           />
-        ) : (
+        )) : (
           familyMembers.map(familyMember => (
             <Card
               key={familyMember.id}
               style={styles.memberCard}>
               <View style={styles.memberRow}>
-                <View style={styles.memberAvatar}>
-                  <Text style={styles.memberInitial}>
-                    {familyMember.name.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
+                <Avatar uri={familyMember.photo} name={familyMember.name} size={44} />
 
                 <View style={styles.memberInfo}>
                   <Text style={styles.memberName}>
@@ -142,9 +285,7 @@ export default function FamilyMembersScreen() {
 
                   <Text style={styles.memberMeta}>
                     {familyMember.relation} ·{' '}
-                    {familyMember.gender},{' '}
-                    {familyMember.age}y ·{' '}
-                    {familyMember.bloodGroup}
+                    {familyMember.gender} · {familyMember.uhid}
                   </Text>
                 </View>
 
@@ -160,7 +301,7 @@ export default function FamilyMembersScreen() {
                   />
 
                   <Text style={styles.switchText}>
-                    Switch
+                    {currentPatientId === familyMember.id ? 'Selected' : 'Switch'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -168,16 +309,20 @@ export default function FamilyMembersScreen() {
           ))
         )}
 
-        <Button
-          label="Add Family Member"
+        <CustomButton
+          title="Add Family Member"
           onPress={() => setShowAdd(true)}
-          variant="outline"
-          fullWidth
-          size="lg"
-          icon={
+          disable={saving}
+          topHeight={30}
+          bgColor={ColorConstants.BTNCOLOR}
+          fontsize={14}
+          fontfamily={Fontconstants.SEMIBOLD}
+          bordRadius={scale(12)}
+          leftIcon={
             <Plus
               size={20}
-              color={Colors.primary[600]}
+              color={ColorConstants.WHITE}
+              style={styles.addMemberIcon}
             />
           }
         />
@@ -185,27 +330,82 @@ export default function FamilyMembersScreen() {
 
       <BottomSheet
         visible={showAdd}
-        onClose={() => setShowAdd(false)}
+        dismissible={!saving}
+        onClose={() => {
+          if (!submissionPending.current) { setShowAdd(false); }
+        }}
+        height="80%"
         title="Add Family Member">
-        <View style={styles.bottomSheetContent}>
-          <Text style={styles.sheetLabel}>
-            This is a demo feature. In a production app, you
-            would fill in family member details here.
-          </Text>
-
-          <Button
-            label="Got it"
-            onPress={() => setShowAdd(false)}
-            fullWidth
-            size="lg"
-          />
-        </View>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          pointerEvents={saving ? 'none' : 'auto'}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.bottomSheetContent,
+              {paddingBottom: Spacing.xxxl + insets.bottom},
+            ]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            <Text style={styles.stepTitle}>Basic Details</Text>
+            <Input
+              label="First Name *"
+              value={form.firstName}
+              onChangeText={value => update('firstName', value)}
+              placeholder="Enter first name"
+            />
+            <Input
+              label="Last Name *"
+              value={form.lastName}
+              onChangeText={value => update('lastName', value)}
+              placeholder="Enter last name"
+            />
+            <Input
+              label="Date of Birth *"
+              value={form.dob}
+              onChangeText={value => update('dob', value)}
+              placeholder="YYYY-MM-DD"
+            />
+            <Text style={styles.label}>Gender</Text>
+            <View style={styles.chipRow}>
+              {(['Male', 'Female', 'Other'] as const).map(gender => (
+                <Chip
+                  key={gender}
+                  label={gender}
+                  selected={form.gender === gender}
+                  onPress={() => update('gender', gender)}
+                />
+              ))}
+            </View>
+            <Input
+              label="Relation *"
+              value={form.relation}
+              onChangeText={value => update('relation', value)}
+              placeholder="e.g. Father, Mother, Spouse"
+            />
+            <CustomButton
+              title={saving ? 'Adding...' : 'Add Family Member'}
+              disable={saving}
+              topHeight={30}
+              bgColor={ColorConstants.BTNCOLOR}
+              fontsize={14}
+              fontfamily={Fontconstants.SEMIBOLD}
+              bordRadius={scale(12)}
+              onPress={handleContinue}
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
+        {/* Render toast errors above the native bottom-sheet modal. */}
+        {showAdd && <Toast />}
       </BottomSheet>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  addMemberIcon: {
+    marginRight: Spacing.sm,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.neutral[50],
@@ -293,12 +493,27 @@ const styles = StyleSheet.create({
     color: Colors.primary[700],
   },
   bottomSheetContent: {
-    paddingBottom: Spacing.xl,
-    gap: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingHorizontal: Math.max(0, scale(24) - Spacing.base),
   },
-  sheetLabel: {
-    fontSize: FontSize.base,
-    lineHeight: 22,
-    color: Colors.neutral[500],
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  stepTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+    color: Colors.neutral[900],
+    marginBottom: Spacing.md,
+  },
+  label: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.neutral[700],
+    marginBottom: Spacing.sm,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: Spacing.md,
   },
 });
