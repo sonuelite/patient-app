@@ -1,9 +1,16 @@
+import {useAppSelector} from '../../../store/hooks';
+import {selectAccessToken, selectDoctors, selectEntityId, selectPatientId} from '../../../store/selectors';
+import {getAllRelatedPatients} from '../../../network/api';
+import type {RelatedPatient} from '../../../network/api';
+import {getErrorMessage} from '../../../utils/apiError';
 import React, {
+  useCallback,
   useMemo,
   useRef,
   useState,
 } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   ScrollView,
   StyleSheet,
@@ -14,6 +21,7 @@ import {
 } from 'react-native';
 import {
   RouteProp,
+  useFocusEffect,
   useNavigation,
   useRoute,
 } from '@react-navigation/native';
@@ -177,12 +185,58 @@ export default function BookAppointmentScreen() {
     route.params?.consultationType;
 
   const {
-    doctors,
     currentPatientId,
-    patients,
     addAppointment,
     showToast,
   } = useApp();
+  const doctors = useAppSelector(selectDoctors);
+  const parentPatientId = useAppSelector(selectPatientId);
+  const accessToken = useAppSelector(selectAccessToken);
+  const entityId = useAppSelector(selectEntityId);
+  const [relatedPatients, setRelatedPatients] = useState<RelatedPatient[]>([]);
+  const [loadingPatients, setLoadingPatients] = useState(true);
+  const [patientsError, setPatientsError] = useState<string | null>(null);
+  const [patientsRetry, setPatientsRetry] = useState(0);
+
+  useFocusEffect(useCallback(() => {
+    const controller = new AbortController();
+    setRelatedPatients([]);
+    setPatientsError(null);
+    if (parentPatientId === null || !accessToken) {
+      setLoadingPatients(false);
+      setPatientsError('Please sign in again to view family members');
+      return () => controller.abort();
+    }
+    setLoadingPatients(true);
+    getAllRelatedPatients(parentPatientId, controller.signal)
+      .then(records => {
+        if (!controller.signal.aborted) {
+          setRelatedPatients(records);
+          setPatientId(previous => records.some(item => String(item.patient_id) === previous)
+            ? previous : '');
+        }
+      })
+      .catch(error => {
+        if (!controller.signal.aborted) {
+          setPatientsError(getErrorMessage(error, 'Unable to load family members'));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) { setLoadingPatients(false); }
+      });
+    return () => controller.abort();
+  // Reload on hospital changes and explicit retries as well as account changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parentPatientId, accessToken, entityId, patientsRetry]));
+
+  const patients = useMemo(() => relatedPatients.map(item => ({
+    id: String(item.patient_id),
+    name: `${item.first_name} ${item.last_name}`.trim(),
+    photo: item.photo ?? undefined,
+    uhid: item.uhid,
+    relation: item.relation_of,
+    gender: item.gender,
+  })), [relatedPatients]);
 
   const initialDoctor = useMemo(
     () =>
@@ -326,7 +380,7 @@ export default function BookAppointmentScreen() {
       return;
     }
 
-    if (step === 5 && !patientId) {
+    if (step === 5 && (loadingPatients || patientsError || !selectedPatient)) {
       showToast(
         'Please select a patient',
         'error',
@@ -525,12 +579,12 @@ export default function BookAppointmentScreen() {
                   <Text
                     style={styles.doctorSelectSpec}>
                     {doctor.specialty} ·{' '}
-                    {doctor.experience}y exp
+                    {doctor.experience === null ? 'Experience unavailable' : `${doctor.experience}y exp`}
                   </Text>
 
                   <Text
                     style={styles.doctorSelectFee}>
-                    ₹{doctor.consultationFee}
+                    {doctor.consultationFee === null ? 'Fee unavailable' : `₹${doctor.consultationFee}`}
                   </Text>
                 </View>
 
@@ -671,7 +725,18 @@ export default function BookAppointmentScreen() {
               Select Patient
             </Text>
 
-            {patients.slice(0, 5).map(patient => (
+            {loadingPatients ? (
+              <ActivityIndicator size="large" color={Colors.primary[600]} />
+            ) : patientsError ? (
+              <View>
+                <Text style={styles.patientId}>{patientsError}</Text>
+                <Button label="Retry" onPress={() => setPatientsRetry(value => value + 1)} />
+              </View>
+            ) : patients.length === 0 ? (
+              <Text style={styles.patientId}>No patients found.</Text>
+            ) : null}
+
+            {patients.map(patient => (
               <TouchableOpacity
                 key={patient.id}
                 activeOpacity={0.7}
@@ -697,8 +762,7 @@ export default function BookAppointmentScreen() {
                   </Text>
 
                   <Text style={styles.patientId}>
-                    {patient.id} · {patient.gender},{' '}
-                    {patient.age}y
+                    {patient.uhid} · {patient.gender} · {patient.relation}
                   </Text>
                 </View>
 
@@ -806,9 +870,7 @@ export default function BookAppointmentScreen() {
 
                 <Text
                   style={styles.summaryValueBold}>
-                  ₹
-                  {selectedDoctor?.consultationFee ??
-                    0}
+                  {selectedDoctor?.consultationFee == null ? 'Fee unavailable' : `₹${selectedDoctor.consultationFee}`}
                 </Text>
               </View>
             </Card>
@@ -830,9 +892,7 @@ export default function BookAppointmentScreen() {
               </Text>
 
               <Text style={styles.paymentAmount}>
-                ₹
-                {selectedDoctor?.consultationFee ??
-                  0}
+                {selectedDoctor?.consultationFee == null ? 'Fee unavailable' : `₹${selectedDoctor.consultationFee}`}
               </Text>
             </Card>
 

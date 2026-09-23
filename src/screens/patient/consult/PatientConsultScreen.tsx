@@ -1,3 +1,5 @@
+import {useAppSelector} from '../../../store/hooks';
+import {selectDoctors} from '../../../store/selectors';
 import React from 'react';
 import {
   View,
@@ -49,8 +51,8 @@ export default function PatientConsultScreen() {
   const {
     currentPatientId,
     appointments,
-    doctors,
   } = useApp();
+  const doctors = useAppSelector(selectDoctors);
 
   const videoAppts = appointments.filter(
     a =>

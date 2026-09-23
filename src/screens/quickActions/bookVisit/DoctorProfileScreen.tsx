@@ -1,3 +1,5 @@
+import {useAppSelector} from '../../../store/hooks';
+import {selectDoctors} from '../../../store/selectors';
 import React, {useState} from 'react';
 import {
   ScrollView,
@@ -34,7 +36,6 @@ import {
 import {Card, Badge} from '../../../components/ui/Card';
 import {Avatar} from '../../../components/ui/DataDisplay';
 import {Button} from '../../../components/ui/Button';
-import {useApp} from '../../../context/AppContext';
 import {TIME_SLOTS} from '../../../data/mockData';
 import type {RootStackParamList} from '../../../types';
 import { ColorConstants } from '../../../constants/colorConstants';
@@ -62,7 +63,7 @@ export default function DoctorProfileScreen() {
   const route = useRoute<DoctorProfileRouteProp>();
 
   const {doctorId} = route.params;
-  const {doctors} = useApp();
+  const doctors = useAppSelector(selectDoctors);
 
   const [selectedSlot, setSelectedSlot] =
     useState<string | null>(null);
@@ -71,8 +72,7 @@ export default function DoctorProfileScreen() {
     useState(0);
 
   const doctor =
-    doctors.find(item => item.id === doctorId) ??
-    doctors[0];
+    doctors.find(item => item.id === doctorId);
 
   const days = [
     'Today',
@@ -170,13 +170,13 @@ export default function DoctorProfileScreen() {
               />
 
               <Text style={styles.ratingText}>
-                {doctor.rating}
+                {doctor.rating ?? 'Not rated'}
               </Text>
 
               <Text style={styles.dot}>·</Text>
 
               <Text style={styles.experienceText}>
-                {doctor.experience} years exp
+                {doctor.experience === null ? 'Experience unavailable' : `${doctor.experience} years exp`}
               </Text>
             </View>
           </View>
@@ -210,7 +210,7 @@ export default function DoctorProfileScreen() {
               </Text>
 
               <Text style={styles.infoValue}>
-                ₹{doctor.consultationFee}
+                {doctor.consultationFee === null ? 'Fee unavailable' : `₹${doctor.consultationFee}`}
               </Text>
             </View>
 

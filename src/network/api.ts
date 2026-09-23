@@ -2,6 +2,40 @@ import {apiClient, publicClient} from './client';
 import type {PatientLoginResponse} from '../types/auth';
 export {apiClient} from './client';
 
+export interface PatientDoctor {
+  full_name: string;
+  employee_official_email: string | null;
+  employee_code: string;
+  fee: string | number | null;
+  contact_number: string | null;
+  employee_id: number;
+  country_code: string | null;
+  emp_personal_email: string | null;
+  department_id: number | null;
+  status: string;
+  dept_id: number | null;
+  department_name: string;
+}
+
+export async function getAllDoctors(
+  entityId: string | number,
+  signal?: AbortSignal,
+): Promise<PatientDoctor[]> {
+  const response = await apiClient.get<{
+    success: boolean;
+    code: number;
+    message?: string;
+    data: PatientDoctor[];
+  }>('/api/v1/patient/getAllDoctors', {
+    params: {entity_id: entityId},
+    signal,
+  });
+  if (!response.data.success || !Array.isArray(response.data.data)) {
+    throw new Error(response.data.message || 'Unable to load doctors');
+  }
+  return response.data.data;
+}
+
 export interface RelatedPatient {
   patient_id: number;
   uuid: string;

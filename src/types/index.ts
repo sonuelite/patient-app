@@ -106,6 +106,7 @@ export type InsuranceStatus =
 | 'settled';
 
 export type Department =
+| (string & {})
 | 'Cardiology'
 | 'Neurology'
 | 'Orthopedics'
@@ -170,13 +171,13 @@ id: string;
 name: string;
 qualification: string;
 specialty: Department;
-experience: number;
+experience: number | null;
 hospital: string;
-consultationFee: number;
+consultationFee: number | null;
 languages: string[];
 about: string;
 availableDays: string[];
-rating: number;
+rating: number | null;
 reviews: Review[];
 photo: string;
 active: boolean;

@@ -1,10 +1,11 @@
-import React from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   Image,
+  ScrollView,
 } from 'react-native';
 
 import {
@@ -24,11 +25,6 @@ import {
 
 import type {
   Doctor,
-  AppointmentStatus,
-  ConsultationType,
-  LabStatus,
-  BedStatus,
-  BillStatus,
 } from '../../types';
 
 export function Avatar({
@@ -119,19 +115,19 @@ export function DoctorCard({
             />
 
             <Text style={styles.metaText}>
-              {doctor.rating}
+              {doctor.rating ?? 'Not rated'}
             </Text>
           </View>
 
           <Text style={styles.dot}>•</Text>
 
           <Text style={styles.metaText}>
-            {doctor.experience} yrs
+            {doctor.experience === null ? 'Experience unavailable' : `${doctor.experience} yrs`}
           </Text>
         </View>
 
         <Text style={styles.doctorFee}>
-          ₹{doctor.consultationFee}
+          {doctor.consultationFee === null ? 'Fee unavailable' : `₹${doctor.consultationFee}`}
         </Text>
       </View>
     </TouchableOpacity>
@@ -555,8 +551,29 @@ export function Stepper({
   steps: string[];
   current: number;
 }) {
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
+
+  useEffect(() => {
+    if (!viewportWidth || !contentWidth) { return; }
+    // Each step is 60 points wide with a 16-point connector.
+    const activeCenter = current * 76 + 30;
+    scrollRef.current?.scrollTo({
+      x: Math.max(0, Math.min(activeCenter - viewportWidth / 2, contentWidth - viewportWidth)),
+      animated: true,
+    });
+  }, [current, viewportWidth, contentWidth]);
+
   return (
-    <View style={styles.stepper}>
+    <ScrollView
+      ref={scrollRef}
+      horizontal
+      style={styles.stepperScroll}
+      contentContainerStyle={styles.stepper}
+      showsHorizontalScrollIndicator
+      onLayout={event => setViewportWidth(event.nativeEvent.layout.width)}
+      onContentSizeChange={width => setContentWidth(width)}>
       {steps.map((step, i) => (
         <React.Fragment key={i}>
           <View style={styles.step}>
@@ -604,7 +621,7 @@ export function Stepper({
           )}
         </React.Fragment>
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -832,6 +849,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  stepperScroll: {
+    flexGrow: 0,
+  },
+
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -887,7 +908,7 @@ const styles = StyleSheet.create({
   },
 
   stepConnector: {
-    flex: 1,
+    width: 16,
     height: 2,
     backgroundColor: Colors.neutral[200],
     marginBottom: Spacing.xl,

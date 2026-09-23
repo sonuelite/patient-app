@@ -8,7 +8,6 @@ import React, {
 
 import type {
   Patient,
-  Doctor,
   Appointment,
   Prescription,
   LabOrder,
@@ -38,7 +37,6 @@ interface AppContextType {
   currentDoctorId: string;
 
   patients: Patient[];
-  doctors: Doctor[];
   appointments: Appointment[];
   prescriptions: Prescription[];
   labOrders: LabOrder[];
@@ -137,15 +135,6 @@ interface AppContextType {
     patient: Omit<Patient, 'id'>
   ) => Patient;
 
-  addDoctor: (
-    doctor: Omit<Doctor, 'id'>
-  ) => Doctor;
-
-  updateDoctor: (
-    id: string,
-    updates: Partial<Doctor>
-  ) => void;
-
   admitPatient: (
     patientId: string,
     admission: Omit<IPDAdmission, 'id' | 'patientId'>
@@ -190,7 +179,6 @@ export function AppProvider({
   const [currentDoctorId] = useState('DOC-001');
 
   const [patients, setPatients] = useState(mock.patients);
-  const [doctors, setDoctors] = useState(mock.doctors);
   const [appointments, setAppointments] = useState(
     mock.appointments
   );
@@ -831,50 +819,6 @@ export function AppProvider({
   );
 
   // -------------------------
-  // Doctors
-  // -------------------------
-
-  const addDoctor = useCallback(
-    (
-      doctor: Omit<Doctor, 'id'>
-    ): Doctor => {
-      const newDoctor = {
-        ...doctor,
-        id: `DOC-${String(
-          doctors.length + 1
-        ).padStart(3, '0')}`,
-      };
-
-      setDoctors(prev => [
-        ...prev,
-        newDoctor,
-      ]);
-
-      return newDoctor;
-    },
-    [doctors.length]
-  );
-
-  const updateDoctor = useCallback(
-    (
-      id: string,
-      updates: Partial<Doctor>
-    ) => {
-      setDoctors(prev =>
-        prev.map(doctor =>
-          doctor.id === id
-            ? {
-                ...doctor,
-                ...updates,
-              }
-            : doctor
-        )
-      );
-    },
-    []
-  );
-
-  // -------------------------
   // IPD Admission
   // -------------------------
 
@@ -1006,7 +950,6 @@ export function AppProvider({
         currentDoctorId,
 
         patients,
-        doctors,
         appointments,
         prescriptions,
         labOrders,
@@ -1055,8 +998,6 @@ export function AppProvider({
         updateInsuranceClaim,
 
         addPatient,
-        addDoctor,
-        updateDoctor,
 
         admitPatient,
         dischargePatient,

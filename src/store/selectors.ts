@@ -1,5 +1,7 @@
 import type { RootState } from './index';
 
+export const selectDoctors = (state: RootState) => state.doctors.items;
+
 export const selectAccessToken = (state: RootState) => state.auth.accessToken;
 export const selectPatient = (state: RootState) => state.auth.patient;
 export const selectPatientId = (state: RootState) =>
