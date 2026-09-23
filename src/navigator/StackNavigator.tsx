@@ -12,6 +12,8 @@ import Otp from '../screens/auth/otp/Otp';
 import BottomTabNavigator from './BottomTabNavigator';
 import FamilyMembersScreen from '../screens/patient/profile/familyMembers/FamilyMembers';
 import FindDoctorScreen from '../screens/quickActions/bookVisit/FindDoctorScreen';
+import DoctorProfileScreen from '../screens/quickActions/bookVisit/DoctorProfileScreen';
+import BookAppointmentScreen from '../screens/quickActions/bookVisit/BookAppointmentScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -42,6 +44,8 @@ const StackNavigator = () => {
           <Stack.Screen name="PatientTabs" component={BottomTabNavigator} />
           <Stack.Screen name="FamilyMembers" component={FamilyMembersScreen} />
           <Stack.Screen name="FindDoctor" component={FindDoctorScreen} />
+          <Stack.Screen name="DoctorProfile" component={DoctorProfileScreen}/>
+          <Stack.Screen name="BookAppointment" component={BookAppointmentScreen}/>
         </>
       ) : (
         <>

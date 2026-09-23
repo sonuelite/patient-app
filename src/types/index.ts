@@ -19,6 +19,17 @@ export type RootStackParamList = {
     DoctorProfile: {
       doctorId: string;
     };
+
+  //   BookAppointment: {
+  //   doctorId: string;
+  //   consultationType?: 'video' | 'in-person';
+  // };
+    BookAppointment:
+    | {
+        doctorId?: string;
+        consultationType?: ConsultationType;
+      }
+    | undefined;
 };
 
 export type UserRole = 'patient' | 'doctor' | 'admin';
