@@ -2,6 +2,64 @@ import {apiClient, publicClient} from './client';
 import type {PatientLoginResponse} from '../types/auth';
 export {apiClient} from './client';
 
+export interface PayAppointmentData {
+  billingId: string;
+  amountPaid: number;
+  paymentMode: string;
+  paymentDetails: string;
+}
+
+export async function payAppointment(data: PayAppointmentData): Promise<void> {
+  const response = await apiClient.post<{success: boolean; message?: string}>(
+    '/api/v1/patient/payAppointment', data,
+  );
+  if (response.data.success !== true) {
+    throw new Error(response.data.message || 'Unable to pay for appointment');
+  }
+}
+
+export interface BookAppointmentData {
+  patientId: number;
+  department: number;
+  doctor: {employee_id: number};
+  appointmentDate: string;
+  appointmentTime: string;
+  appointmentType: string;
+  bookingFor: string;
+  bookingSource: 'App';
+  purposeOfVisit: string;
+  charges: number;
+  discountPercent: number;
+  paidAmount: number;
+  remarks: string;
+}
+
+export interface BookedAppointment {
+  appointment_id: number;
+  patient_id: number;
+  patient_name: string;
+  bookingFor: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  token_no: number;
+  bill_no: string;
+  netAmount: number;
+  status: string;
+  booked_by: string;
+}
+
+export async function bookAppointment(data: BookAppointmentData): Promise<BookedAppointment> {
+  const response = await apiClient.post<{
+    success: boolean;
+    message?: string;
+    data: BookedAppointment;
+  }>('/api/v1/patient/bookAppointment', data);
+  if (!response.data.success || !response.data.data?.appointment_id) {
+    throw new Error(response.data.message || 'Unable to book appointment');
+  }
+  return response.data.data;
+}
+
 export interface PatientDoctor {
   full_name: string;
   employee_official_email: string | null;

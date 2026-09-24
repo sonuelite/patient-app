@@ -182,13 +182,13 @@ const Signup = () => {
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Basic Details</Text>
             <Input
-              label="Full Name *"
+              label="First Name *"
               value={form.firstName}
               onChangeText={v => update('firstName', v)}
               placeholder="Enter first name"
             />
             <Input
-              label="Full Name *"
+              label="Last Name *"
               value={form.lastName}
               onChangeText={v => update('lastName', v)}
               placeholder="Enter last name"

@@ -1,7 +1,7 @@
 import {useAppSelector} from '../../../store/hooks';
 import {selectAccessToken, selectDoctors, selectEntityId, selectPatientId} from '../../../store/selectors';
-import {getAllRelatedPatients} from '../../../network/api';
-import type {RelatedPatient} from '../../../network/api';
+import {bookAppointment, payAppointment, getAllRelatedPatients} from '../../../network/api';
+import type {BookedAppointment, RelatedPatient} from '../../../network/api';
 import {getErrorMessage} from '../../../utils/apiError';
 import React, {
   useCallback,
@@ -28,15 +28,9 @@ import {
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {
-  Banknote,
-  Building,
   Check,
   ChevronLeft,
-  CreditCard,
-  ShieldCheck,
-  Smartphone,
 } from 'lucide-react-native';
-import type {LucideIcon} from 'lucide-react-native';
 
 import {
   Colors,
@@ -74,19 +68,6 @@ type BookAppointmentRouteProp = RouteProp<
   'BookAppointment'
 >;
 
-type PaymentMethod =
-  | 'upi'
-  | 'card'
-  | 'netbanking'
-  | 'cash'
-  | 'insurance';
-
-interface PaymentMethodItem {
-  id: PaymentMethod;
-  label: string;
-  icon: LucideIcon;
-}
-
 const STEPS = [
   'Department',
   'Doctor',
@@ -107,34 +88,6 @@ const CONSULTATION_TYPES: ConsultationType[] = [
   'video',
   'audio',
   'physical',
-];
-
-const PAYMENT_METHODS: PaymentMethodItem[] = [
-  {
-    id: 'upi',
-    label: 'UPI',
-    icon: Smartphone,
-  },
-  {
-    id: 'card',
-    label: 'Card',
-    icon: CreditCard,
-  },
-  {
-    id: 'netbanking',
-    label: 'Net Banking',
-    icon: Building,
-  },
-  {
-    id: 'cash',
-    label: 'Cash',
-    icon: Banknote,
-  },
-  {
-    id: 'insurance',
-    label: 'Insurance',
-    icon: ShieldCheck,
-  },
 ];
 
 const QUICK_REASONS = [
@@ -186,7 +139,6 @@ export default function BookAppointmentScreen() {
 
   const {
     currentPatientId,
-    addAppointment,
     showToast,
   } = useApp();
   const doctors = useAppSelector(selectDoctors);
@@ -283,16 +235,21 @@ export default function BookAppointmentScreen() {
 
   const [reason, setReason] = useState('');
 
-  const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethod>('upi');
+  const [paymentMode, setPaymentMode] = useState('UPI');
+  const [paymentDetails, setPaymentDetails] = useState('');
+  const [paying, setPaying] = useState(false);
+  const paymentPending = useRef(false);
+  const paymentCompleted = useRef(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [booking, setBooking] = useState(false);
+  const bookingPending = useRef(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [bookedAppointment, setBookedAppointment] = useState<BookedAppointment | null>(null);
 
   const successAnimation = useRef(
     new Animated.Value(0),
   ).current;
 
-  const appointmentId = useRef(
-    `APT-${Date.now().toString().slice(-6)}`,
-  ).current;
 
   const selectedDoctor = doctors.find(
     doctor => doctor.id === selectedDoctorId,
@@ -346,6 +303,8 @@ export default function BookAppointmentScreen() {
   }, [doctors, department]);
 
   const handleBackPress = () => {
+    if (bookingPending.current || paymentPending.current) { return; }
+    if (bookedAppointment) { navigation.goBack(); return; }
     // if (step > 0 && step < 9) {
     if (step > 2 && step < 9) {
       setStep(previousStep => previousStep - 1);
@@ -401,52 +360,90 @@ export default function BookAppointmentScreen() {
     }
   };
 
-  const handleConfirm = () => {
-    if (
-      !selectedDoctorId ||
-      !selectedDoctor ||
-      !selectedPatient ||
-      !time
-    ) {
-      showToast(
-        'Appointment details are incomplete',
-        'error',
-      );
+  const handleConfirm = async () => {
+    if (bookingPending.current || bookedAppointment) { return; }
+    if (!selectedDoctor || !selectedPatient || !time || !reason.trim() ||
+        !accessToken || entityId === null) {
+      showToast('Appointment details are incomplete', 'error');
       return;
     }
+    const employeeId = Number(selectedDoctor.id);
+    const departmentId = selectedDoctor.departmentId;
+    const charges = selectedDoctor.consultationFee;
+    if (!Number.isInteger(employeeId) || employeeId <= 0 || departmentId == null) {
+      showToast('Please select a doctor from Find a Doctor again', 'error');
+      return;
+    }
+    if (charges === null || !Number.isFinite(charges) || charges < 0) {
+      showToast('The consultation fee is unavailable. Please contact the hospital.', 'error');
+      return;
+    }
+    // Convert the displayed 12-hour slot to the API's HH:mm format.
+    const [clock, period] = time.split(' ');
+    const [hours, minutes] = clock.split(':').map(Number);
+    const hour24 = (hours % 12) + (period === 'PM' ? 12 : 0);
+    const appointmentTime = String(hour24).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+    bookingPending.current = true;
+    setBooking(true);
+    setBookingError(null);
+    try {
+      const result = await bookAppointment({
+        patientId: Number(selectedPatient.id),
+        department: departmentId,
+        doctor: {employee_id: employeeId},
+        appointmentDate: date,
+        appointmentTime,
+        appointmentType: consultationType === 'follow-up' ? 'Follow-up' : 'New Consultation',
+        bookingFor: selectedPatient.relation.trim().toLowerCase(),
+        bookingSource: 'App',
+        purposeOfVisit: reason.trim(),
+        charges,
+        discountPercent: 0,
+        paidAmount: 0,
+        remarks: '',
+      });
+      setBookedAppointment(result);
+      setStep(8);
+      showToast('Appointment booked successfully', 'success');
+    } catch (error: unknown) {
+      setBookingError(getErrorMessage(error, 'Unable to book appointment. Please try again.'));
+    } finally {
+      bookingPending.current = false;
+      setBooking(false);
+    }
+  };
 
-    addAppointment({
-      patientId,
-      patientName: selectedPatient.name,
-      doctorId: selectedDoctorId,
-      doctorName: selectedDoctor.name,
-      department: selectedDoctor.specialty,
-      date,
-      time,
-      consultationType,
-      hospital:
-        selectedDoctor.hospital ||
-        'MediCare Health',
-      status: 'confirmed',
-      reason: reason.trim(),
-      token:
-        Math.floor(Math.random() * 30) + 1,
-    });
-
-    setStep(9);
-
-    requestAnimationFrame(() => {
-      Animated.timing(successAnimation, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
-    });
-
-    showToast(
-      'Appointment booked successfully',
-      'success',
-    );
+  const handlePayment = async () => {
+    if (paymentPending.current || paymentCompleted.current || !bookedAppointment) { return; }
+    const amount = Number(bookedAppointment.netAmount);
+    if (!bookedAppointment.bill_no || !Number.isFinite(amount) || amount < 0) {
+      setPaymentError('The booking did not return valid billing details. Please contact the hospital.');
+      return;
+    }
+    paymentPending.current = true;
+    setPaying(true);
+    setPaymentError(null);
+    try {
+      await payAppointment({
+        billingId: bookedAppointment.bill_no,
+        amountPaid: amount,
+        paymentMode,
+        paymentDetails: paymentDetails.trim(),
+      });
+      paymentCompleted.current = true;
+      setStep(9);
+      requestAnimationFrame(() => {
+        Animated.timing(successAnimation, {
+          toValue: 1, duration: 500, useNativeDriver: true,
+        }).start();
+      });
+      showToast('Payment successful', 'success');
+    } catch (error: unknown) {
+      setPaymentError(getErrorMessage(error, 'Unable to pay for appointment. Please try again.'));
+    } finally {
+      paymentPending.current = false;
+      setPaying(false);
+    }
   };
 
   const handleViewAppointment = () => {
@@ -820,6 +817,7 @@ export default function BookAppointmentScreen() {
             <Text style={styles.stepTitle}>
               Appointment Summary
             </Text>
+            {bookingError && <Text accessibilityRole="alert" style={styles.bookingError}>{bookingError}</Text>}
 
             <Card style={styles.summaryCard}>
               <SummaryRow
@@ -878,72 +876,33 @@ export default function BookAppointmentScreen() {
         ) : null}
 
         {/* Payment */}
-
-        {step === 8 ? (
+        {step === 8 && bookedAppointment ? (
           <View>
-            <Text style={styles.stepTitle}>
-              Mock Payment
-            </Text>
-
+            <Text style={styles.stepTitle}>Payment</Text>
             <Card style={styles.paymentAmountCard}>
-              <Text
-                style={styles.paymentAmountLabel}>
-                Amount to Pay
-              </Text>
-
-              <Text style={styles.paymentAmount}>
-                {selectedDoctor?.consultationFee == null ? 'Fee unavailable' : `₹${selectedDoctor.consultationFee}`}
-              </Text>
+              <Text style={styles.paymentAmountLabel}>Amount to Pay</Text>
+              <Text style={styles.paymentAmount}>{'₹'}{bookedAppointment.netAmount}</Text>
+              <Text style={styles.paymentAmountLabel}>Bill: {bookedAppointment.bill_no}</Text>
             </Card>
-
-            <Text style={styles.paymentLabel}>
-              Select Payment Method
-            </Text>
-
-            {PAYMENT_METHODS.map(method => {
-              const PaymentIcon = method.icon;
-              const isSelected =
-                paymentMethod === method.id;
-
-              return (
-                <TouchableOpacity
-                  key={method.id}
-                  activeOpacity={0.7}
-                  onPress={() =>
-                    setPaymentMethod(method.id)
-                  }
-                  style={[
-                    styles.paymentMethod,
-                    isSelected &&
-                      styles.paymentMethodActive,
-                  ]}>
-                  <PaymentIcon
-                    size={22}
-                    color={
-                      isSelected
-                        ? Colors.primary[600]
-                        : Colors.neutral[400]
-                    }
-                  />
-
-                  <Text
-                    style={[
-                      styles.paymentMethodText,
-                      isSelected &&
-                        styles.paymentMethodTextActive,
-                    ]}>
-                    {method.label}
-                  </Text>
-
-                  {isSelected ? (
-                    <Check
-                      size={20}
-                      color={Colors.primary[600]}
-                    />
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
+            <Text style={styles.paymentLabel}>Select Payment Method</Text>
+            {['UPI', 'Card', 'Net Banking', 'Cash', 'Insurance'].map(mode => (
+              <TouchableOpacity key={mode} disabled={paying} onPress={() => setPaymentMode(mode)}
+                style={[styles.paymentMethod, paymentMode === mode && styles.paymentMethodActive]}>
+                <Text style={[styles.paymentMethodText, paymentMode === mode && styles.paymentMethodTextActive]}>{mode}</Text>
+                {paymentMode === mode && <Check size={20} color={Colors.primary[600]} />}
+              </TouchableOpacity>
+            ))}
+            <Text style={styles.paymentLabel}>Payment Details / Transaction Reference</Text>
+            <TextInput
+              value={paymentDetails}
+              onChangeText={setPaymentDetails}
+              editable={!paying}
+              placeholder="Enter payment details"
+              accessibilityLabel="Payment details"
+              autoCapitalize="none"
+              style={styles.paymentMethod}
+            />
+            {paymentError && <Text accessibilityRole="alert" style={styles.bookingError}>{paymentError}</Text>}
           </View>
         ) : null}
 
@@ -987,7 +946,11 @@ export default function BookAppointmentScreen() {
             <Card style={styles.confirmCard}>
               <SummaryRow
                 label="Appointment ID"
-                value={appointmentId}
+                value={String(bookedAppointment?.appointment_id ?? '-')}
+              />
+              <SummaryRow label="Token" value={String(bookedAppointment?.token_no ?? '-')} />
+              <SummaryRow label="Bill Number" value={bookedAppointment?.bill_no ?? '-'} />
+              <SummaryRow label="Net Amount" value={String(bookedAppointment?.netAmount ?? '-')}
               />
 
               <SummaryRow
@@ -1006,7 +969,7 @@ export default function BookAppointmentScreen() {
 
               <SummaryRow
                 label="Date & Time"
-                value={`${date} · ${time || '-'}`}
+                value={(bookedAppointment?.appointmentDate ?? '-') + ' ' + (bookedAppointment?.appointmentTime ?? '-')}
               />
 
               <SummaryRow
@@ -1016,7 +979,7 @@ export default function BookAppointmentScreen() {
 
               <SummaryRow
                 label="Patient"
-                value={selectedPatient?.name || '-'}
+                value={bookedAppointment?.patient_name || '-'}
               />
             </Card>
 
@@ -1050,19 +1013,21 @@ export default function BookAppointmentScreen() {
           ]}>
           <Button
             label={
-              step === 8
-                ? 'Pay & Confirm'
+              step === 8 ? 'Continue' : step === 7
+                ? 'Book Appointment'
                 : 'Continue'
             }
             onPress={
-              step === 8
+              step === 8 ? handlePayment : step === 7
                 ? handleConfirm
                 : handleNext
             }
+            loading={booking || paying}
+            disabled={booking || paying}
             fullWidth
             size="lg"
             icon={
-              step === 8 ? (
+              step === 7 ? (
                 <Check
                   size={20}
                   color={Colors.neutral[0]}
@@ -1099,6 +1064,7 @@ function SummaryRow({
 }
 
 const styles = StyleSheet.create({
+  bookingError: {color: Colors.error[600], marginBottom: Spacing.md},
   container: {
     flex: 1,
     backgroundColor: Colors.neutral[50],

@@ -167,6 +167,7 @@ bloodGroup: string;
 }
 
 export interface Doctor {
+departmentId?: number | null;
 id: string;
 name: string;
 qualification: string;

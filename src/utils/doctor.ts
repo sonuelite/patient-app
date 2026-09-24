@@ -5,6 +5,7 @@ export function mapPatientDoctor(doctor: PatientDoctor): Doctor {
   const fee = doctor.fee === null || doctor.fee === '' ? null : Number(doctor.fee);
   return {
     id: String(doctor.employee_id),
+    departmentId: doctor.dept_id,
     name: doctor.full_name,
     specialty: doctor.department_name,
     consultationFee: fee !== null && Number.isFinite(fee) ? fee : null,
