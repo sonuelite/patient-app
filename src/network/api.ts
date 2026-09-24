@@ -188,7 +188,7 @@ export interface RegisterPatientData {
 export const registerPatient = async (
   data: RegisterPatientData,
   entityId?: string,
-) => {
+) : Promise<PatientLoginResponse> => {
   const formData = new FormData();
 
   formData.append('firstName', data.firstName);
@@ -210,7 +210,7 @@ export const registerPatient = async (
     );
   }
 
-  const response = await publicClient.post<{success?: boolean; message?: string}>(
+  const response = await publicClient.post<PatientLoginResponse>(
     '/api/v1/patient/register_patient',
     formData,
     {

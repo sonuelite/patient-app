@@ -26,7 +26,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../types';
 import { registerPatient } from '../../../network/api';
 import { showToast } from '../../../utils/toast';
-
+import axios from 'axios';
+import { sessionFromLogin } from '../../../types/auth';
+import { completeLogin } from '../../../store/authSlice';
+import { useAppDispatch } from '../../../store/hooks';
 type SignupScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'Signup'
@@ -35,6 +38,7 @@ type SignupScreenNavigationProp = NativeStackNavigationProp<
 const Signup = () => {
   const navigation = useNavigation<SignupScreenNavigationProp>();
   const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
 
   const [form, setForm] = useState({
     // name: '',
@@ -129,34 +133,48 @@ const Signup = () => {
       };
 
       const response = await registerPatient(patientData);
-      console.log("registerPatient res",response);
-      
+      console.log('registerPatient res', response);
+
+      if (!response.success) {
+        showToast(response.message || 'Patient registration failed', 'error');
+        return;
+      }
+
+      const session = sessionFromLogin(response);
+      await dispatch(completeLogin(session)).unwrap();
+
       showToast(
         response.message || 'Patient registered successfully',
         'success',
       );
 
       // navigation.navigate('Otp');
-    }  catch (error: any) {
-  const errorData = error.response?.data;
+    } catch (error: any) {
+      // console.log('Full registration error:', error);
 
-  console.log(
-    'Registration error data:',
-    JSON.stringify(errorData, null, 2),
-  );
+      // if (error instanceof Error) {
+      //   console.log('Error message:', error.message);
+      // }
 
-  console.log(
-    'Registration status:',
-    error.response?.status,
-  );
+      // if (axios.isAxiosError(error)) {
+      //   console.log('Axios code:', error.code);
+      //   console.log('Request URL:', error.config?.url);
+      //   console.log('HTTP status:', error.response?.status);
+      //   console.log('Server response:', error.response?.data);
+      // }
 
-  const message =
-    errorData?.message ||
-    errorData?.error ||
-    'Patient registration failed';
-
-  showToast(message, 'error');
-} finally {
+      // showToast(
+      //   axios.isAxiosError(error)
+      //     ? error.response?.data?.message ||
+      //         error.message ||
+      //         'Patient registration failed'
+      //     : error instanceof Error
+      //       ? error.message
+      //       : 'Patient registration failed',
+      //   'error',
+      // );
+      showToast(error.response?.data?.message, 'error');
+    } finally {
       setLoading(false);
     }
   };

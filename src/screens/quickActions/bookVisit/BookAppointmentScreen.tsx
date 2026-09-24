@@ -56,6 +56,10 @@ import type {
   ConsultationType,
   RootStackParamList,
 } from '../../../types';
+import CustomButton from '../../../components/customButton/CustomButton';
+import { ColorConstants } from '../../../constants/colorConstants';
+import { Fontconstants } from '../../../constants/fontConstants';
+import { scale } from '../../../utils/scale';
 
 type BookAppointmentNavigationProp =
   NativeStackNavigationProp<
@@ -386,6 +390,7 @@ export default function BookAppointmentScreen() {
     bookingPending.current = true;
     setBooking(true);
     setBookingError(null);
+    console.log("selectedPatient->", selectedPatient);
     try {
       const result = await bookAppointment({
         patientId: Number(selectedPatient.id),
@@ -394,7 +399,8 @@ export default function BookAppointmentScreen() {
         appointmentDate: date,
         appointmentTime,
         appointmentType: consultationType === 'follow-up' ? 'Follow-up' : 'New Consultation',
-        bookingFor: selectedPatient.relation.trim().toLowerCase(),
+        // bookingFor: selectedPatient.relation.trim().toLowerCase(),
+        bookingFor: selectedPatient.relation.trim().toLowerCase() === 'self' ? 'self' : 'family',
         bookingSource: 'App',
         purposeOfVisit: reason.trim(),
         charges,
@@ -446,21 +452,27 @@ export default function BookAppointmentScreen() {
     }
   };
 
-  const handleViewAppointment = () => {
-    navigation.navigate('PatientTabs', {
-      screen: 'Appointments',
-    });
-  };
+  // const handleViewAppointment = () => {
+  //   navigation.navigate('PatientTabs', {
+  //     screen: 'Appointments',
+  //   });
+  // };
 
-  const handleDone = () => {
+  // const handleDone = () => {
+  //   navigation.navigate('PatientTabs', {
+  //     screen: 'Home',
+  //   });
+  // };
+
+  const handleExit = () => {
     navigation.navigate('PatientTabs', {
-      screen: 'Home',
+      screen: 'index',
     });
   };
 
   return (
     <View style={styles.container}>
-      <View
+      {/* <View
         style={[
           styles.header,
           {
@@ -492,7 +504,31 @@ export default function BookAppointmentScreen() {
             current={step}
           />
         ) : null}
+      </View> */}
+          <View
+      style={[
+        styles.header,
+        {paddingTop: insets.top + Spacing.md},
+      ]}
+    >
+      <View style={styles.headerRow}>
+        {step < 9 ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleBackPress}
+            style={styles.backButton}
+          >
+            <ChevronLeft size={24} color={Colors.neutral[900]} />
+          </TouchableOpacity>
+        ) : null}
+
+        <Text style={styles.title}>
+          {step === 9 ? 'Appointment Confirmed' : 'Book Appointment'}
+        </Text>
       </View>
+
+      <Stepper steps={STEPS} current={step} />
+    </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -984,19 +1020,36 @@ export default function BookAppointmentScreen() {
             </Card>
 
             <View style={styles.confirmActions}>
-              <Button
+              {/* <Button
                 label="View Appointment"
                 onPress={handleViewAppointment}
                 variant="primary"
                 size="md"
-              />
+              /> */}
 
-              <Button
+              {/* <Button
                 label="Done"
                 onPress={handleDone}
                 variant="outline"
                 size="md"
-              />
+              /> */}
+
+              {/* <Button
+              label="Exit"
+              onPress={handleExit}
+              variant="primary"
+              size="md"
+              /> */}
+        <CustomButton
+          title="Exit"
+          onPress={handleExit}
+          disable={false}
+        //   topHeight={30}
+          bgColor={ColorConstants.BTNCOLOR}
+          fontsize={14}
+          fontfamily={Fontconstants.SEMIBOLD}
+          bordRadius={scale(12)}
+        />
             </View>
           </View>
         ) : null}
@@ -1403,7 +1456,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
   },
   confirmActions: {
-    width: '100%',
+    // width: '100%',
     flexDirection: 'row',
     gap: Spacing.md,
     marginTop: Spacing.xl,

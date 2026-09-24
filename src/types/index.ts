@@ -1,3 +1,12 @@
+import type {NavigatorScreenParams} from '@react-navigation/native';
+export type BottomTabParamList = {
+  index: undefined;
+  appointments: undefined;
+  records: undefined;
+  consult: undefined;
+  profile: undefined;
+};
+
 export type RootStackParamList = {
     SplashScreen: undefined;
 
@@ -10,7 +19,7 @@ export type RootStackParamList = {
   };
     // RoleSelect: undefined;
 
-    PatientTabs: undefined;
+    PatientTabs: NavigatorScreenParams<BottomTabParamList>;
     // DoctorTabs: undefined;
     // AdminTabs: undefined;
     FamilyMembers: undefined;
