@@ -39,6 +39,8 @@ export type RootStackParamList = {
         consultationType?: ConsultationType;
       }
     | undefined;
+
+    AddPatient: undefined;
 };
 
 export type UserRole = 'patient' | 'doctor' | 'admin';

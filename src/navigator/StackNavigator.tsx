@@ -14,6 +14,7 @@ import FamilyMembersScreen from '../screens/patient/profile/familyMembers/Family
 import FindDoctorScreen from '../screens/quickActions/bookVisit/FindDoctorScreen';
 import DoctorProfileScreen from '../screens/quickActions/bookVisit/DoctorProfileScreen';
 import BookAppointmentScreen from '../screens/quickActions/bookVisit/BookAppointmentScreen';
+import AddPatient from '../screens/patient/profile/familyMembers/AddPatient';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -46,6 +47,7 @@ const StackNavigator = () => {
           <Stack.Screen name="FindDoctor" component={FindDoctorScreen} />
           <Stack.Screen name="DoctorProfile" component={DoctorProfileScreen}/>
           <Stack.Screen name="BookAppointment" component={BookAppointmentScreen}/>
+          <Stack.Screen name="AddPatient" component={AddPatient} />
         </>
       ) : (
         <>

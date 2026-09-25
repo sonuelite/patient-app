@@ -285,7 +285,8 @@ export default function PatientHomeScreen() {
           <View style={styles.healthBar}>
             <StatTile
               label="Blood Pressure"
-              value={latestVital ? latestVital.bp : '--'}
+              // value={latestVital ? latestVital.bp : '--'}
+              value={0}
               icon={
                 <Heart
                   size={18}
@@ -298,11 +299,12 @@ export default function PatientHomeScreen() {
 
             <StatTile
               label="SpO2"
-              value={
-                latestVital
-                  ? `${latestVital.spo2}%`
-                  : '--'
-              }
+              // value={
+              //   latestVital
+              //     ? `${latestVital.spo2}%`
+              //     : '--'
+              // }
+                value={`${0}%`}
               icon={
                 <Wind
                   size={18}
@@ -315,11 +317,12 @@ export default function PatientHomeScreen() {
 
             <StatTile
               label="Blood Sugar"
-              value={
-                latestVital
-                  ? `${latestVital.bloodSugar}`
-                  : '--'
-              }
+              // value={
+              //   latestVital
+              //     ? `${latestVital.bloodSugar}`
+              //     : '--'
+              // }
+                  value={0}
               icon={
                 <Droplet
                   size={18}
@@ -332,7 +335,7 @@ export default function PatientHomeScreen() {
           </View>
 
           {/* Upcoming Appointment */}
-          {upcomingAppt && (
+          {/* {upcomingAppt && (
             <>
               <SectionHeader
                 title="Upcoming Appointment"
@@ -415,7 +418,7 @@ export default function PatientHomeScreen() {
                   </View>
                 </View>
 
-                {/* Appointment Stepper */}
+                
                 <View style={styles.stepperRow}>
                   {apptSteps.map((s, i) => (
                     <View
@@ -464,7 +467,7 @@ export default function PatientHomeScreen() {
                   ))}
                 </View>
 
-                {/* Appointment Actions */}
+                
                 <View style={styles.apptActions}>
                   <TouchableOpacity
                     style={styles.viewBtn}
@@ -526,10 +529,10 @@ export default function PatientHomeScreen() {
                 </View>
               </Card>
             </>
-          )}
+          )} */}
 
           {/* Active Medications */}
-          {activeMeds.length > 0 && (
+          {/* {activeMeds.length > 0 && (
             <>
               <SectionHeader
                 title="Active Medications"
@@ -594,7 +597,7 @@ export default function PatientHomeScreen() {
                   ))}
               </SectionCard>
             </>
-          )}
+          )} */}
 
           {/* Quick Actions */}
           <SectionHeader title="Quick Actions" />
@@ -699,9 +702,9 @@ export default function PatientHomeScreen() {
           )}
 
           {/* Recent Activity */}
-          <SectionHeader title="Recent Activity" />
+          {/* <SectionHeader title="Recent Activity" /> */}
 
-          <View style={styles.recentList}>
+          {/* <View style={styles.recentList}>
             {latestRx && (
               <Card
                 style={styles.recentCard}
@@ -821,10 +824,10 @@ export default function PatientHomeScreen() {
                 />
               </Card>
             )}
-          </View>
+          </View> */}
 
           {/* IPD Stay */}
-          {patient.ipdAdmission && (
+          {/* {patient.ipdAdmission && (
             <>
               <SectionHeader
                 title="My Hospital Stay"
@@ -926,10 +929,10 @@ export default function PatientHomeScreen() {
                 </View>
               </Card>
             </>
-          )}
+          )} */}
 
           {/* Unpaid Bills */}
-          {unpaidBills.length > 0 && (
+          {/* {unpaidBills.length > 0 && (
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => goTo('Billing')}>
@@ -971,7 +974,7 @@ export default function PatientHomeScreen() {
                 />
               </View>
             </TouchableOpacity>
-          )}
+          )} */}
         </View>
       </ScrollView>
 

@@ -203,6 +203,9 @@ export default function FamilyMembersScreen() {
     );
   };
 
+  const addPatientHandler = () => {
+    navigation.navigate('AddPatient');
+  }
   return (
     <View style={styles.container}>
       <ScreenHeader
@@ -312,6 +315,23 @@ export default function FamilyMembersScreen() {
         <CustomButton
           title="Add Family Member"
           onPress={() => setShowAdd(true)}
+          disable={saving}
+          topHeight={30}
+          bgColor={ColorConstants.BTNCOLOR}
+          fontsize={14}
+          fontfamily={Fontconstants.SEMIBOLD}
+          bordRadius={scale(12)}
+          leftIcon={
+            <Plus
+              size={20}
+              color={ColorConstants.WHITE}
+              style={styles.addMemberIcon}
+            />
+          }
+        />
+        <CustomButton
+          title="Add Patient"
+          onPress={addPatientHandler}
           disable={saving}
           topHeight={30}
           bgColor={ColorConstants.BTNCOLOR}

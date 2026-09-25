@@ -459,35 +459,247 @@ export function PillTag({
   );
 }
 
+// const styles = StyleSheet.create({
+//   touchWrap: {
+//     width: '48%',
+//   },
+
+//   tile: {
+//     backgroundColor: Colors.neutral[0],
+//     borderRadius: Radius.lg,
+//     // padding: Spacing.base,
+//     // width: scale(158),
+//     // height: scale(158),
+//     width: scale(165),
+//     height: scale(165),
+//     paddingVertical: Spacing.base,
+//     alignItems: 'center',
+//     ...Shadows.md,
+//   },
+
+//   tileLg: {
+//     // padding: Spacing.lg,
+//   },
+
+//   topRow: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     alignItems: 'flex-start',
+//     marginBottom: Spacing.sm,
+//   },
+
+//   iconBox: {
+//     width: 40,
+//     height: 40,
+//     borderRadius: 12,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//   },
+
+//   trendBadge: {
+//     paddingHorizontal: Spacing.sm,
+//     paddingVertical: Spacing.xs,
+//     borderRadius: Radius.sm,
+//   },
+
+//   trendText: {
+//     fontSize: FontSize.xs,
+//     fontWeight: FontWeight.bold,
+//   },
+
+//   value: {
+//     fontSize: FontSize.xxxl,
+//     fontWeight: FontWeight.extrabold,
+//     color: Colors.neutral[900],
+//   },
+
+//   valueLg: {
+//     fontSize: FontSize.display,
+//   },
+
+//   label: {
+//     fontSize: FontSize.sm,
+//     color: Colors.neutral[500],
+//     marginTop: 2,
+//     fontWeight: FontWeight.medium,
+//   },
+
+//   subtitle: {
+//     fontSize: FontSize.xs,
+//     color: Colors.neutral[400],
+//     marginTop: 2,
+//   },
+
+//   infoRow: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     paddingVertical: Spacing.sm,
+//     borderBottomWidth: 1,
+//     borderBottomColor: Colors.neutral[50],
+//   },
+
+//   infoIcon: {
+//     width: 32,
+//     height: 32,
+//     borderRadius: 10,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     marginRight: Spacing.md,
+//   },
+
+//   infoLabel: {
+//     flex: 1,
+//     fontSize: FontSize.sm,
+//     color: Colors.neutral[600],
+//     fontWeight: FontWeight.medium,
+//   },
+
+//   infoValue: {
+//     fontSize: FontSize.sm,
+//     color: Colors.neutral[900],
+//     fontWeight: FontWeight.semibold,
+//   },
+
+//   ringContainer: {
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//   },
+
+//   ringBg: {
+//     position: 'absolute',
+//   },
+
+//   ringFg: {
+//     position: 'absolute',
+//   },
+
+//   ringLabel: {
+//     position: 'absolute',
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//   },
+
+//   ringLabelText: {
+//     fontWeight: FontWeight.extrabold,
+//     color: Colors.neutral[900],
+//   },
+
+//   ringSublabel: {
+//     fontSize: FontSize.xs,
+//     color: Colors.neutral[400],
+//     marginTop: 2,
+//   },
+
+//   metricBar: {
+//     marginBottom: Spacing.md,
+//   },
+
+//   metricBarTop: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     marginBottom: Spacing.xs,
+//   },
+
+//   metricLabel: {
+//     fontSize: FontSize.sm,
+//     color: Colors.neutral[700],
+//     fontWeight: FontWeight.medium,
+//   },
+
+//   metricValue: {
+//     fontSize: FontSize.sm,
+//     color: Colors.neutral[500],
+//     fontWeight: FontWeight.semibold,
+//   },
+
+//   metricBarTrack: {
+//     height: 8,
+//     backgroundColor: Colors.neutral[100],
+//     borderRadius: 4,
+//     overflow: 'hidden',
+//   },
+
+//   metricBarFill: {
+//     height: '100%',
+//     borderRadius: 4,
+//   },
+
+//   sectionCard: {
+//     backgroundColor: Colors.neutral[0],
+//     borderRadius: Radius.lg,
+//     padding: Spacing.base,
+//     marginBottom: Spacing.md,
+//   },
+
+//   sectionCardHeader: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     alignItems: 'center',
+//     marginBottom: Spacing.md,
+//   },
+
+//   sectionCardTitle: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     gap: Spacing.sm,
+//   },
+
+//   sectionCardIcon: {
+//     width: 32,
+//     height: 32,
+//     borderRadius: 10,
+//     backgroundColor: Colors.primary[50],
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//   },
+
+//   sectionCardTitleText: {
+//     fontSize: FontSize.md,
+//     fontWeight: FontWeight.bold,
+//     color: Colors.neutral[900],
+//   },
+
+//   sectionCardAction: {
+//     fontSize: FontSize.sm,
+//     color: Colors.primary[600],
+//     fontWeight: FontWeight.semibold,
+//   },
+
+//   pillTag: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     gap: Spacing.xs,
+//     paddingHorizontal: Spacing.sm + 2,
+//     paddingVertical: Spacing.xs + 1,
+//     borderRadius: Radius.pill,
+//     alignSelf: 'flex-start',
+//   },
+
+//   pillTagText: {
+//     fontSize: FontSize.xs,
+//     fontWeight: FontWeight.semibold,
+//   },
+// });
+
 const styles = StyleSheet.create({
   touchWrap: {
     width: '48%',
   },
-
   tile: {
     backgroundColor: Colors.neutral[0],
     borderRadius: Radius.lg,
-    // padding: Spacing.base,
-    // width: scale(158),
-    // height: scale(158),
-    width: scale(165),
-    height: scale(165),
-    paddingVertical: Spacing.base,
-    alignItems: 'center',
+    padding: Spacing.base,
     ...Shadows.md,
   },
-
   tileLg: {
-    // padding: Spacing.lg,
+    padding: Spacing.lg,
   },
-
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: Spacing.sm,
   },
-
   iconBox: {
     width: 40,
     height: 40,
@@ -495,41 +707,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   trendBadge: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: Radius.sm,
   },
-
   trendText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
-
   value: {
     fontSize: FontSize.xxxl,
     fontWeight: FontWeight.extrabold,
     color: Colors.neutral[900],
   },
-
   valueLg: {
     fontSize: FontSize.display,
   },
-
   label: {
     fontSize: FontSize.sm,
     color: Colors.neutral[500],
     marginTop: 2,
     fontWeight: FontWeight.medium,
   },
-
   subtitle: {
     fontSize: FontSize.xs,
     color: Colors.neutral[400],
     marginTop: 2,
   },
-
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -537,7 +742,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral[50],
   },
-
   infoIcon: {
     width: 32,
     height: 32,
@@ -546,104 +750,87 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: Spacing.md,
   },
-
   infoLabel: {
     flex: 1,
     fontSize: FontSize.sm,
     color: Colors.neutral[600],
     fontWeight: FontWeight.medium,
   },
-
   infoValue: {
     fontSize: FontSize.sm,
     color: Colors.neutral[900],
     fontWeight: FontWeight.semibold,
   },
-
   ringContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   ringBg: {
     position: 'absolute',
   },
-
   ringFg: {
     position: 'absolute',
   },
-
   ringLabel: {
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   ringLabelText: {
     fontWeight: FontWeight.extrabold,
     color: Colors.neutral[900],
   },
-
   ringSublabel: {
     fontSize: FontSize.xs,
     color: Colors.neutral[400],
     marginTop: 2,
   },
-
   metricBar: {
     marginBottom: Spacing.md,
   },
-
   metricBarTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: Spacing.xs,
   },
-
   metricLabel: {
     fontSize: FontSize.sm,
     color: Colors.neutral[700],
     fontWeight: FontWeight.medium,
   },
-
   metricValue: {
     fontSize: FontSize.sm,
     color: Colors.neutral[500],
     fontWeight: FontWeight.semibold,
   },
-
   metricBarTrack: {
     height: 8,
     backgroundColor: Colors.neutral[100],
     borderRadius: 4,
     overflow: 'hidden',
   },
-
   metricBarFill: {
     height: '100%',
     borderRadius: 4,
   },
-
   sectionCard: {
     backgroundColor: Colors.neutral[0],
     borderRadius: Radius.lg,
     padding: Spacing.base,
     marginBottom: Spacing.md,
+    ...Shadows.sm,
   },
-
   sectionCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.md,
   },
-
   sectionCardTitle: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
   },
-
   sectionCardIcon: {
     width: 32,
     height: 32,
@@ -652,19 +839,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   sectionCardTitleText: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
     color: Colors.neutral[900],
   },
-
   sectionCardAction: {
     fontSize: FontSize.sm,
     color: Colors.primary[600],
     fontWeight: FontWeight.semibold,
   },
-
   pillTag: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -674,7 +858,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignSelf: 'flex-start',
   },
-
   pillTagText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
