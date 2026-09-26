@@ -305,7 +305,6 @@ const styles = StyleSheet.create({
     left: Spacing.base,
     right: Spacing.base,
     zIndex: 9999,
-    elevation: 10,
     flexDirection: 'row',
     alignItems: 'center',
     padding: Spacing.base,

@@ -6,6 +6,13 @@ import {
   View,
 } from 'react-native';
 import React, { useState } from 'react';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../../../types';
+import {
+  mapPatientForm,
+  PatientForm,
+  PatientType,
+} from '../../../../utils/patientForm';
 import {
   Colors,
   FontSize,
@@ -22,7 +29,12 @@ import { PatientStateOption } from '../../../../utils/patientStateOptions';
 import { PatientCityOption } from '../../../../utils/patientCityOptions';
 import { Button } from '../../../../components/ui/Button';
 import { useApp } from '../../../../context/AppContext';
-import { pick, types, isCancel } from '@react-native-documents/picker';
+import {
+  pick,
+  types,
+  isErrorWithCode,
+  errorCodes,
+} from '@react-native-documents/picker';
 import {
   UserPlus,
   ScanLine,
@@ -51,49 +63,87 @@ interface Country {
   filter_status?: string;
 }
 
-const AddPatient = () => {
-  const [title, setTitle] = useState('Mr');
-  const [patientType, setPatientType] = useState('Self');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [dob, setDob] = useState('');
-  const [gender, setGender] = useState<'Male' | 'Female' | 'Other'>('Male');
-  const [mobile, setMobile] = useState('');
-  const [address, setAddress] = useState('');
-  const [country, setCountry] = useState('');
+const AddPatient = ({
+  route,
+}: NativeStackScreenProps<RootStackParamList, 'AddPatient'>) => {
+  const [patientType, setPatientType] = useState<PatientType>('Self');
+  const [forms, setForms] = useState<Record<PatientType, PatientForm>>(() => ({
+    Self: mapPatientForm(route.params.patientDetails),
+    'Family Member': mapPatientForm(),
+  }));
+  const form = forms[patientType];
+  const update = <K extends keyof PatientForm>(
+    key: K,
+    value: PatientForm[K],
+  ) => {
+    setForms(previous => ({
+      ...previous,
+      [patientType]: { ...previous[patientType], [key]: value },
+    }));
+  };
+  const {
+    title,
+    firstName,
+    lastName,
+    dob,
+    gender,
+    mobile,
+    address,
+    country,
+    countryId,
+    state,
+    stateId,
+    city,
+    cityId,
+    area,
+    pincode,
+    phone,
+    email,
+    panelVal,
+    selectedPdf,
+    selectedConsentPdf,
+  } = form;
+  const setTitle = (value: PatientForm['title']) => update('title', value);
+  const setFirstName = (value: PatientForm['firstName']) =>
+    update('firstName', value);
+  const setLastName = (value: PatientForm['lastName']) =>
+    update('lastName', value);
+  const setDob = (value: PatientForm['dob']) => update('dob', value);
+  const setGender = (value: PatientForm['gender']) => update('gender', value);
+  const setMobile = (value: PatientForm['mobile']) => update('mobile', value);
+  const setAddress = (value: PatientForm['address']) =>
+    update('address', value);
+  const setCountry = (value: PatientForm['country']) =>
+    update('country', value);
+  const setCountryId = (value: PatientForm['countryId']) =>
+    update('countryId', value);
+  const setState = (value: PatientForm['state']) => update('state', value);
+  const setStateId = (value: PatientForm['stateId']) =>
+    update('stateId', value);
+  const setCity = (value: PatientForm['city']) => update('city', value);
+  const setCityId = (value: PatientForm['cityId']) => update('cityId', value);
+  const setArea = (value: PatientForm['area']) => update('area', value);
+  const setPincode = (value: PatientForm['pincode']) =>
+    update('pincode', value);
+  const setPhone = (value: PatientForm['phone']) => update('phone', value);
+  const setEmail = (value: PatientForm['email']) => update('email', value);
+  const setPanelVal = (value: PatientForm['panelVal']) =>
+    update('panelVal', value);
+  const setSelectedPdf = (value: PatientForm['selectedPdf']) =>
+    update('selectedPdf', value);
+  const setSelectedConsentPdf = (value: PatientForm['selectedConsentPdf']) =>
+    update('selectedConsentPdf', value);
   const [countries, setCountries] = useState<Country[]>([]);
   const [countryLoading, setCountryLoading] = useState(false);
-  const [countryId, setCountryId] = useState('');
-  const [state, setState] = useState('');
-  const [stateId, setStateId] = useState('');
   const [states, setStates] = useState<PatientStateOption[]>([]);
   const [stateLoading, setStateLoading] = useState(false);
   const [stateError, setStateError] = useState('');
   const [stateRetry, setStateRetry] = useState(0);
-  const [city, setCity] = useState('');
-  const [cityId, setCityId] = useState('');
   const [cities, setCities] = useState<PatientCityOption[]>([]);
   const [cityLoading, setCityLoading] = useState(false);
   const [cityError, setCityError] = useState('');
   const [cityRetry, setCityRetry] = useState(0);
-  const [area, setArea] = useState('');
-  const [pincode, setPincode] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [panelVal, setPanelVal] = useState('');
   const [saving, setSaving] = useState(false);
-  const [selectedPdf, setSelectedPdf] = useState<{
-    uri: string;
-    name: string | null;
-    type: string | null;
-    size: number | null;
-  } | null>(null);
-  const [selectedConsentPdf, setSelectedConsentPdf] = useState<{
-    uri: string;
-    name: string | null;
-    type: string | null;
-    size: number | null;
-  } | null>(null);
   const { showToast } = useApp();
 
   const countryOptions = countries
@@ -118,7 +168,10 @@ const AddPatient = () => {
 
       showToast('PDF selected successfully', 'success');
     } catch (error) {
-      if (isCancel(error)) {
+      if (
+        isErrorWithCode(error) &&
+        error.code === errorCodes.OPERATION_CANCELED
+      ) {
         console.log('PDF selection cancelled');
         return;
       }
@@ -146,7 +199,10 @@ const AddPatient = () => {
 
       showToast('Consent PDF selected successfully', 'success');
     } catch (error) {
-      if (isCancel(error)) {
+      if (
+        isErrorWithCode(error) &&
+        error.code === errorCodes.OPERATION_CANCELED
+      ) {
         console.log('Consent PDF selection cancelled');
         return;
       }
@@ -156,8 +212,10 @@ const AddPatient = () => {
     }
   };
   const addPatientHandler = () => {
-    console.log('Add Patient button pressed');
-  }
+    const payload = { patientType, ...form };
+    // Preserve the existing submission stub until an add-patient endpoint is provided.
+    console.log('Add Patient button pressed', payload);
+  };
   return (
     <View style={styles.container}>
       <ScreenHeader title="Add Patient" showBack />
@@ -171,11 +229,15 @@ const AddPatient = () => {
         <Text style={styles.sectionTitle}>Patient Type</Text>
         <Card style={styles.formCard}>
           <CustomDropdown
-            label="Title *"
+            label="Patient Type *"
             value={patientType}
             options={PATIENT_TYPE_OPTIONS}
             placeholder="Select title"
-            onSelect={setPatientType}
+            onSelect={value => {
+              if (value === 'Self' || value === 'Family Member') {
+                setPatientType(value);
+              }
+            }}
           />
         </Card>
         {/* Personal Information */}
@@ -249,88 +311,118 @@ const AddPatient = () => {
 
           {/* COUNTRY DROPDOWN */}
 
-          <CustomDropdown
-            label="Country *"
-            value={country}
-            options={countryOptions}
-            placeholder={
-              countryLoading
-                ? 'Loading countries...'
-                : countryOptions.length > 0
-                ? 'Select country'
-                : 'No countries found'
-            }
-            onSelect={selectedCountry => {
-              if (selectedCountry !== country) {
+          {countryOptions.length === 0 ? (
+            <Input
+              label="Country *"
+              value={country}
+              placeholder="Enter country"
+              onChangeText={value => {
+                setCountry(value);
+                setCountryId('');
                 setState('');
                 setStateId('');
-                setStates([]);
                 setCity('');
                 setCityId('');
-                setCities([]);
+              }}
+            />
+          ) : (
+            <CustomDropdown
+              label="Country *"
+              value={country}
+              options={countryOptions}
+              placeholder={
+                countryLoading
+                  ? 'Loading countries...'
+                  : countryOptions.length > 0
+                  ? 'Select country'
+                  : 'No countries found'
               }
-              /*
-               * Set country name
-               */
-              setCountry(selectedCountry);
-
-              /*
-               * Find complete API object
-               */
-              const selectedCountryData = countries.find(
-                item => item.countryss_name === selectedCountry,
-              );
-
-              if (selectedCountryData) {
+              onSelect={selectedCountry => {
+                if (selectedCountry !== country) {
+                  setState('');
+                  setStateId('');
+                  setStates([]);
+                  setCity('');
+                  setCityId('');
+                  setCities([]);
+                }
                 /*
-                 * API field:
-                 * countryss_id
+                 * Set country name
                  */
-                const selectedId = selectedCountryData.countryss_id;
+                setCountry(selectedCountry);
 
-                setCountryId(String(selectedId ?? ''));
-
-                console.log('Selected Country:', selectedCountryData);
-
-                console.log(
-                  'Selected Country Name:',
-                  selectedCountryData.countryss_name,
+                /*
+                 * Find complete API object
+                 */
+                const selectedCountryData = countries.find(
+                  item => item.countryss_name === selectedCountry,
                 );
 
-                console.log('Selected Country ID:', selectedId);
-              }
-            }}
-          />
+                if (selectedCountryData) {
+                  /*
+                   * API field:
+                   * countryss_id
+                   */
+                  const selectedId = selectedCountryData.countryss_id;
 
-          <CustomDropdown
-            label="State *"
-            value={state}
-            options={states.map(item => item.name)}
-            disabled={!countryId || stateLoading || states.length === 0}
-            placeholder={
-              !countryId
-                ? 'Select country first'
-                : stateLoading
-                ? 'Loading states...'
-                : stateError
-                ? 'Unable to load states'
-                : states.length === 0
-                ? 'No states found'
-                : 'Select state'
-            }
-            onSelect={selectedName => {
-              const selectedState = states.find(
-                item => item.name === selectedName,
-              );
-              setState(selectedState?.name || '');
-              setStateId(selectedState?.id || '');
-              if (selectedState?.id !== stateId) {
+                  setCountryId(String(selectedId ?? ''));
+
+                  console.log('Selected Country:', selectedCountryData);
+
+                  console.log(
+                    'Selected Country Name:',
+                    selectedCountryData.countryss_name,
+                  );
+
+                  console.log('Selected Country ID:', selectedId);
+                }
+              }}
+            />
+          )}
+
+          {states.length === 0 ? (
+            <Input
+              label="State *"
+              value={state}
+              placeholder="Enter state"
+              onChangeText={value => {
+                setState(value);
+                setStateId('');
                 setCity('');
                 setCityId('');
-                setCities([]);
+              }}
+            />
+          ) : (
+            <CustomDropdown
+              label="State *"
+              value={state}
+              options={states.map(item => item.name)}
+              disabled={!countryId || stateLoading || states.length === 0}
+              placeholder={
+                !countryId
+                  ? 'Select country first'
+                  : stateLoading
+                  ? 'Loading states...'
+                  : stateError
+                  ? 'Unable to load states'
+                  : states.length === 0
+                  ? 'No states found'
+                  : 'Select state'
               }
-            }}
-          />
+              onSelect={selectedName => {
+                const selectedState = states.find(
+                  item => item.name === selectedName,
+                );
+                setState(selectedState?.name || '');
+                setStateId(selectedState?.id || '');
+                if (selectedState?.id !== stateId) {
+                  setCity('');
+                  setCityId('');
+                  setCities([]);
+                }
+              }}
+            />
+          )}
           {!!stateError && (
             <View>
               <Text accessibilityRole="alert">{stateError}</Text>
@@ -341,30 +433,42 @@ const AddPatient = () => {
             </View>
           )}
 
-          <CustomDropdown
-            label="City *"
-            value={city}
-            options={cities.map(item => item.name)}
-            disabled={!stateId || cityLoading || cities.length === 0}
-            placeholder={
-              !stateId
-                ? 'Select state first'
-                : cityLoading
-                ? 'Loading cities...'
-                : cityError
-                ? 'Unable to load cities'
-                : cities.length === 0
-                ? 'No cities found'
-                : 'Select city'
-            }
-            onSelect={selectedName => {
-              const selectedCity = cities.find(
-                item => item.name === selectedName,
-              );
-              setCity(selectedCity?.name || '');
-              setCityId(selectedCity?.id || '');
-            }}
-          />
+          {cities.length === 0 ? (
+            <Input
+              label="City *"
+              value={city}
+              placeholder="Enter city"
+              onChangeText={value => {
+                setCity(value);
+                setCityId('');
+              }}
+            />
+          ) : (
+            <CustomDropdown
+              label="City *"
+              value={city}
+              options={cities.map(item => item.name)}
+              disabled={!stateId || cityLoading || cities.length === 0}
+              placeholder={
+                !stateId
+                  ? 'Select state first'
+                  : cityLoading
+                  ? 'Loading cities...'
+                  : cityError
+                  ? 'Unable to load cities'
+                  : cities.length === 0
+                  ? 'No cities found'
+                  : 'Select city'
+              }
+              onSelect={selectedName => {
+                const selectedCity = cities.find(
+                  item => item.name === selectedName,
+                );
+                setCity(selectedCity?.name || '');
+                setCityId(selectedCity?.id || '');
+              }}
+            />
+          )}
           {!!cityError && (
             <View>
               <Text accessibilityRole="alert">{cityError}</Text>
@@ -422,7 +526,6 @@ const AddPatient = () => {
             onChangeText={setEmail}
             placeholder="patient@email.com"
             keyboardType="email-address"
-            autoCapitalize="none"
           />
         </Card>
 
@@ -517,7 +620,7 @@ const AddPatient = () => {
             </View>
           )}
         </Card>
-                <CustomButton
+        <CustomButton
           title="Submit"
           onPress={addPatientHandler}
           disable={saving}
@@ -526,7 +629,6 @@ const AddPatient = () => {
           fontsize={14}
           fontfamily={Fontconstants.SEMIBOLD}
           bordRadius={scale(12)}
-          
         />
       </ScrollView>
     </View>

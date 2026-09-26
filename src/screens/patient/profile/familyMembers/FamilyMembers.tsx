@@ -34,7 +34,9 @@ import {ColorConstants} from '../../../../constants/colorConstants';
 import {Fontconstants} from '../../../../constants/fontConstants';
 import {scale} from '../../../../utils/scale';
 import {showToast as showFormToast} from '../../../../utils/toast';
-import {addFamilyMember, getAllRelatedPatients} from '../../../../network/api';
+import {addFamilyMember, getAllRelatedPatients, getPatientDetails} from '../../../../network/api';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RootStackParamList} from '../../../../types';
 import type {RelatedPatient} from '../../../../network/api';
 import {getErrorMessage} from '../../../../utils/apiError';
 import {useAppSelector} from '../../../../store/hooks';
@@ -53,11 +55,14 @@ const initialForm: FamilyMemberForm = {
 };
 
 export default function FamilyMembersScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [loadingPatient, setLoadingPatient] = useState(false);
+  const patientRequest = useRef<AbortController | null>(null);
   const insets = useSafeAreaInsets();
   const parentPatientId = useAppSelector(selectPatientId);
   const entityId = useAppSelector(selectEntityId);
   const accessToken = useAppSelector(selectAccessToken);
+  useEffect(() => () => { patientRequest.current?.abort(); }, [parentPatientId, accessToken]);
   const [saving, setSaving] = useState(false);
   const submissionPending = useRef(false);
 
@@ -203,9 +208,31 @@ export default function FamilyMembersScreen() {
     );
   };
 
-  const addPatientHandler = () => {
-    navigation.navigate('AddPatient');
-  }
+  const addPatientHandler = async () => {
+    if (patientRequest.current && !patientRequest.current.signal.aborted) { return; }
+    if (parentPatientId === null || !accessToken) {
+      showFormToast('Please sign in again to add a patient', 'error');
+      return;
+    }
+    const controller = new AbortController();
+    patientRequest.current = controller;
+    setLoadingPatient(true);
+    try {
+      const patientDetails = await getPatientDetails(parentPatientId, controller.signal);
+      if (!controller.signal.aborted) {
+        navigation.navigate('AddPatient', {patientDetails});
+      }
+    } catch (error: unknown) {
+      if (!controller.signal.aborted) {
+        showFormToast(getErrorMessage(error, 'Unable to load patient details'), 'error');
+      }
+    } finally {
+      if (patientRequest.current === controller) {
+        patientRequest.current = null;
+        setLoadingPatient(false);
+      }
+    }
+  };
   return (
     <View style={styles.container}>
       <ScreenHeader
@@ -330,9 +357,9 @@ export default function FamilyMembersScreen() {
           }
         />
         <CustomButton
-          title="Add Patient"
+          title={loadingPatient ? 'Loading patient...' : 'Add Patient'}
           onPress={addPatientHandler}
-          disable={saving}
+          disable={saving || loadingPatient}
           topHeight={30}
           bgColor={ColorConstants.BTNCOLOR}
           fontsize={14}

@@ -5,20 +5,24 @@ import {Provider} from 'react-redux';
 import {createAppStore} from '../src/store';
 import {completeLogin} from '../src/store/authSlice';
 import {session} from '../testUtils/auth';
-import {getAllRelatedPatients} from '../src/network/api';
+import {getPatientDetails, getAllRelatedPatients} from '../src/network/api';
 import type {RelatedPatient} from '../src/network/api';
 import FamilyMembersScreen from '../src/screens/patient/profile/familyMembers/FamilyMembers';
+
+const mockNavigate = jest.fn();
+import CustomButton from '../src/components/customButton/CustomButton';
+import {showToast} from '../src/utils/toast';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(async () => null), setItem: jest.fn(async () => undefined),
   removeItem: jest.fn(async () => undefined),
 }));
-jest.mock('../src/network/api', () => ({getAllRelatedPatients: jest.fn(), addFamilyMember: jest.fn()}));
+jest.mock('../src/network/api', () => ({getPatientDetails: jest.fn(), getAllRelatedPatients: jest.fn(), addFamilyMember: jest.fn()}));
 jest.mock('../src/context/AppContext', () => ({
   useApp: () => ({currentPatientId: '', setCurrentPatientId: jest.fn(), showToast: jest.fn()}),
 }));
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({goBack: jest.fn()}),
+  useNavigation: () => ({goBack: jest.fn(), navigate: mockNavigate}),
   useFocusEffect: (callback: () => (() => void)) => require('react').useEffect(callback, [callback]),
 }));
 jest.mock('react-native-safe-area-context', () => ({
@@ -81,4 +85,29 @@ test('a failed request shows retry instead of the no-family message', async () =
   const empty = root.root.find(node => typeof node.type === 'string' && node.props.title === 'Unable to load family members');
   expect(empty.props.message).toBe('Network failed');
   expect(empty.props.action.label).toBe('Retry');
+});
+
+
+test('Add Patient waits for the authenticated patient details before navigating', async () => {
+  jest.mocked(getAllRelatedPatients).mockResolvedValue([primary]);
+  let resolve!: (value: typeof primary) => void;
+  jest.mocked(getPatientDetails).mockReturnValue(new Promise(done => { resolve = done; }));
+  await renderScreen();
+  const button = () => root.root.findAllByType(CustomButton).find(node => node.props.title === 'Add Patient' || node.props.title === 'Loading patient...')!;
+  let request: Promise<void>;
+  act(() => { request = button().props.onPress() as unknown as Promise<void>; });
+  expect(button().props.disable).toBe(true);
+  expect(mockNavigate).not.toHaveBeenCalled();
+  expect(getPatientDetails).toHaveBeenCalledWith(session.patient.patient_id, expect.any(AbortSignal));
+  await act(async () => { resolve(primary); await request; });
+  expect(mockNavigate).toHaveBeenCalledWith('AddPatient', {patientDetails: primary});
+});
+
+test('Add Patient displays the request error without navigating', async () => {
+  jest.mocked(getAllRelatedPatients).mockResolvedValue([primary]);
+  jest.mocked(getPatientDetails).mockRejectedValue(new Error('Patient unavailable'));
+  await renderScreen();
+  await act(async () => { await root.root.findAllByType(CustomButton).find(node => node.props.title === 'Add Patient')!.props.onPress(); });
+  expect(showToast).toHaveBeenCalledWith('Patient unavailable', 'error');
+  expect(mockNavigate).not.toHaveBeenCalled();
 });

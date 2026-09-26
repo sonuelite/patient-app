@@ -1,6 +1,21 @@
 import {apiClient, publicClient} from './client';
 import type {PatientLoginResponse} from '../types/auth';
+import type {PatientDetails, PatientDetailsResponse} from '../types/patientDetails';
 export {apiClient} from './client';
+
+export async function getPatientDetails(
+  patientId: number,
+  signal?: AbortSignal,
+): Promise<PatientDetails> {
+  const response = await apiClient.get<PatientDetailsResponse>(
+    '/api/v1/patient/getPatientDetails', {params: {id: patientId}, signal},
+  );
+  const {success, data, message, error} = response.data;
+  if (success !== true || !data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error(message || error || 'Unable to load patient details');
+  }
+  return data;
+}
 
 export interface PayAppointmentData {
   billingId: string;

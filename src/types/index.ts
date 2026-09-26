@@ -1,4 +1,5 @@
 import type {NavigatorScreenParams} from '@react-navigation/native';
+import type {PatientDetails} from './patientDetails';
 export type BottomTabParamList = {
   index: undefined;
   appointments: undefined;
@@ -40,7 +41,7 @@ export type RootStackParamList = {
       }
     | undefined;
 
-    AddPatient: undefined;
+    AddPatient: {patientDetails: PatientDetails};
 };
 
 export type UserRole = 'patient' | 'doctor' | 'admin';
