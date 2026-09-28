@@ -14,10 +14,10 @@ export function createApiClient(getState: () => RootState): AxiosInstance {
     } else {
       config.headers.delete('Authorization');
     }
-    if (isLoggedIn && selectedEntityId !== null) {
-      config.headers.set('x-entity-id', selectedEntityId);
-    } else {
+    if (!isLoggedIn) {
       config.headers.delete('x-entity-id');
+    } else if (!config.headers.has('x-entity-id') && selectedEntityId !== null) {
+      config.headers.set('x-entity-id', selectedEntityId);
     }
     return config;
   });

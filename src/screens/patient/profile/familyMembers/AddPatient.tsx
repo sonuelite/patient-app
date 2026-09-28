@@ -5,7 +5,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import {getAllActiveCountry, getStatesByCountryId} from '../../../../network/api';
+import {getErrorMessage} from '../../../../utils/apiError';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../../types';
 import {
@@ -135,6 +137,8 @@ const AddPatient = ({
     update('selectedConsentPdf', value);
   const [countries, setCountries] = useState<Country[]>([]);
   const [countryLoading, setCountryLoading] = useState(false);
+  const [countryError, setCountryError] = useState('');
+  const [countryRetry, setCountryRetry] = useState(0);
   const [states, setStates] = useState<PatientStateOption[]>([]);
   const [stateLoading, setStateLoading] = useState(false);
   const [stateError, setStateError] = useState('');
@@ -146,9 +150,37 @@ const AddPatient = ({
   const [saving, setSaving] = useState(false);
   const { showToast } = useApp();
 
-  const countryOptions = countries
-    .map(item => item.countryss_name)
-    .filter((name): name is string => Boolean(name));
+  useEffect(() => {
+    const controller = new AbortController();
+    setCountryLoading(true);
+    setCountryError('');
+    getAllActiveCountry(controller.signal).then(options => {
+      if (!controller.signal.aborted) { setCountries(options); }
+    }).catch((error: unknown) => {
+      if (!controller.signal.aborted) { setCountryError(getErrorMessage(error, 'Unable to load countries')); }
+    }).finally(() => {
+      if (!controller.signal.aborted) { setCountryLoading(false); }
+    });
+    return () => controller.abort();
+  }, [countryRetry]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setStates([]);
+    setStateError('');
+    setStateLoading(Boolean(countryId));
+    if (countryId) {
+      getStatesByCountryId(countryId, controller.signal).then(options => {
+        if (!controller.signal.aborted) { setStates(options); }
+      }).catch((error: unknown) => {
+        if (!controller.signal.aborted) { setStateError(getErrorMessage(error, 'Unable to load states')); }
+      }).finally(() => {
+        if (!controller.signal.aborted) { setStateLoading(false); }
+      });
+    }
+    return () => controller.abort();
+  }, [countryId, patientType, stateRetry]);
+
 
   const handlePdfUpload = async () => {
     try {
@@ -311,118 +343,45 @@ const AddPatient = ({
 
           {/* COUNTRY DROPDOWN */}
 
-          {countryOptions.length === 0 ? (
-            <Input
-              label="Country *"
-              value={country}
-              placeholder="Enter country"
-              onChangeText={value => {
-                setCountry(value);
-                setCountryId('');
-                setState('');
-                setStateId('');
-                setCity('');
-                setCityId('');
-              }}
-            />
-          ) : (
-            <CustomDropdown
-              label="Country *"
-              value={country}
-              options={countryOptions}
-              placeholder={
-                countryLoading
-                  ? 'Loading countries...'
-                  : countryOptions.length > 0
-                  ? 'Select country'
-                  : 'No countries found'
+          <CustomDropdown
+            label="Country *"
+            value={countryId || String(countries.find(item => item.countryss_name === country)?.countryss_id ?? country)}
+            options={countries.map(item => ({label: item.countryss_name || '', value: String(item.countryss_id)}))}
+            disabled={saving}
+            placeholder={countryLoading ? 'Loading countries...' : 'Select country'}
+            onSelect={id => {
+              const selected = countries.find(item => String(item.countryss_id) === id);
+              if (!selected) { return; }
+              setCountry(selected.countryss_name || '');
+              setCountryId(id);
+              if (id !== countryId) {
+                setState(''); setStateId(''); setStates([]);
+                setCity(''); setCityId(''); setCities([]);
               }
-              onSelect={selectedCountry => {
-                if (selectedCountry !== country) {
-                  setState('');
-                  setStateId('');
-                  setStates([]);
-                  setCity('');
-                  setCityId('');
-                  setCities([]);
-                }
-                /*
-                 * Set country name
-                 */
-                setCountry(selectedCountry);
+            }}
+          />
+          {countryLoading && <Text>Loading countries...</Text>}
+          {!countryLoading && (!!countryError || countries.length === 0) && <View>
+            <Text accessibilityRole="alert">{countryError || 'No countries available'}</Text>
+            <Button label="Retry loading countries" onPress={() => setCountryRetry(value => value + 1)} />
+          </View>}
 
-                /*
-                 * Find complete API object
-                 */
-                const selectedCountryData = countries.find(
-                  item => item.countryss_name === selectedCountry,
-                );
-
-                if (selectedCountryData) {
-                  /*
-                   * API field:
-                   * countryss_id
-                   */
-                  const selectedId = selectedCountryData.countryss_id;
-
-                  setCountryId(String(selectedId ?? ''));
-
-                  console.log('Selected Country:', selectedCountryData);
-
-                  console.log(
-                    'Selected Country Name:',
-                    selectedCountryData.countryss_name,
-                  );
-
-                  console.log('Selected Country ID:', selectedId);
-                }
-              }}
-            />
-          )}
-
-          {states.length === 0 ? (
-            <Input
-              label="State *"
-              value={state}
-              placeholder="Enter state"
-              onChangeText={value => {
-                setState(value);
-                setStateId('');
-                setCity('');
-                setCityId('');
-              }}
-            />
-          ) : (
-            <CustomDropdown
-              label="State *"
-              value={state}
-              options={states.map(item => item.name)}
-              disabled={!countryId || stateLoading || states.length === 0}
-              placeholder={
-                !countryId
-                  ? 'Select country first'
-                  : stateLoading
-                  ? 'Loading states...'
-                  : stateError
-                  ? 'Unable to load states'
-                  : states.length === 0
-                  ? 'No states found'
-                  : 'Select state'
+          <CustomDropdown
+            label="State *"
+            value={stateId || states.find(item => item.name === state)?.id || state}
+            options={states.map(item => ({label: item.name, value: item.id}))}
+            disabled={!countryId || stateLoading || saving}
+            placeholder={!countryId ? 'Select country first' : stateLoading ? 'Loading states...' : stateError ? 'Unable to load states' : states.length ? 'Select state' : 'No states found'}
+            onSelect={id => {
+              const selected = states.find(item => item.id === id);
+              if (!selected) { return; }
+              setState(selected.name);
+              setStateId(selected.id);
+              if (id !== stateId) {
+                setCity(''); setCityId(''); setCities([]);
               }
-              onSelect={selectedName => {
-                const selectedState = states.find(
-                  item => item.name === selectedName,
-                );
-                setState(selectedState?.name || '');
-                setStateId(selectedState?.id || '');
-                if (selectedState?.id !== stateId) {
-                  setCity('');
-                  setCityId('');
-                  setCities([]);
-                }
-              }}
-            />
-          )}
+            }}
+          />
           {!!stateError && (
             <View>
               <Text accessibilityRole="alert">{stateError}</Text>

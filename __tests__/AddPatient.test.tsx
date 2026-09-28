@@ -4,6 +4,11 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../src/types';
 import AddPatient from '../src/screens/patient/profile/familyMembers/AddPatient';
 import { mapPatientForm } from '../src/utils/patientForm';
+import {getStatesByCountryId} from '../src/network/api';
+jest.mock('../src/network/api', () => ({
+  getAllActiveCountry: jest.fn(async () => [{countryss_id: 101, countryss_name: 'India'}]),
+  getStatesByCountryId: jest.fn(async () => [{id: '10', name: 'Delhi'}]),
+}));
 
 jest.mock('../src/context/AppContext', () => ({
   useApp: () => ({ showToast: jest.fn() }),
@@ -91,6 +96,13 @@ test('keeps Self and Family Member edits separate across switches and unrelated 
       node => typeof node.type === 'string' && node.props.label === label,
     );
   expect(field('First Name *').props.value).toBe('Self name');
+  expect(field('Country *').props.options).toEqual([{label: 'India', value: '101'}]);
+  await act(async () => field('Country *').props.onSelect('101'));
+  expect(field('Country *').props.value).toBe('101');
+  expect(getStatesByCountryId).toHaveBeenCalledWith('101', expect.any(AbortSignal));
+  expect(field('State *').props.options).toEqual([{label: 'Delhi', value: '10'}]);
+  act(() => field('State *').props.onSelect('10'));
+  expect(field('State *').props.value).toBe('10');
   act(() => field('Patient Type *').props.onSelect('Family Member'));
   expect(field('First Name *').props.value).toBe('');
   expect(field('Phone *').props.value).toBe('');

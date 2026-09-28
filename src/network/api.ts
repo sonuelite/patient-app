@@ -2,6 +2,40 @@ import {apiClient, publicClient} from './client';
 import type {PatientLoginResponse} from '../types/auth';
 import type {PatientDetails, PatientDetailsResponse} from '../types/patientDetails';
 export {apiClient} from './client';
+import {normalizePatientStates, PatientStateOption} from '../utils/patientStateOptions';
+
+export async function getStatesByCountryId(
+  countryId: string | number, signal?: AbortSignal,
+): Promise<PatientStateOption[]> {
+  const response = await apiClient.get(
+    '/api/v1/patient/getStatesByCountryId/' + encodeURIComponent(countryId),
+    {headers: {'x-entity-id': '1'}, signal, timeout: 15000},
+  );
+  if (response.data?.success === false ||
+      (response.data?.code !== undefined && response.data.code !== 200)) {
+    throw new Error(response.data.message || 'Unable to load states');
+  }
+  return normalizePatientStates(response.data);
+}
+
+export interface CountryOption {
+  countryss_id: number | string;
+  countryss_name: string;
+}
+
+export async function getAllActiveCountry(signal?: AbortSignal): Promise<CountryOption[]> {
+  const response = await apiClient.get<{
+    success?: boolean; code?: number; message?: string; data?: CountryOption[];
+  }>('/api/v1/patient/getAllActiveCountry', {
+    headers: {'x-entity-id': '1'}, signal, timeout: 15000,
+  });
+  if (response.data.success === false ||
+      (response.data.code !== undefined && response.data.code !== 200) ||
+      !Array.isArray(response.data.data)) {
+    throw new Error(response.data.message || 'Unable to load countries');
+  }
+  return response.data.data;
+}
 
 export async function getPatientDetails(
   patientId: number,

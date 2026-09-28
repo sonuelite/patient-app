@@ -26,6 +26,9 @@ test('requests use the latest Redux token and selected entity, then clear header
   await appStore.dispatch(selectEntity('hospital-b')).unwrap();
   await client.get('/test');
   expect(headers.get('x-entity-id')).toBe('hospital-b');
+  await client.get('/api/v1/patient/getAllActiveCountry', {headers: {'x-entity-id': '1'}});
+  expect(headers.get('x-entity-id')).toBe('1');
+  expect(headers.get('Authorization')).toBe(`Bearer ${session.accessToken}`);
   await appStore.dispatch(logout()).unwrap();
   await client.get('/test', {
     headers: { Authorization: 'stale', 'x-entity-id': 'stale' },
