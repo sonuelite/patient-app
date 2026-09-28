@@ -6,7 +6,7 @@ import {
   View,
 } from 'react-native';
 import React, { useEffect, useState } from 'react';
-import {getAllActiveCountry, getStatesByCountryId} from '../../../../network/api';
+import {editFamilyMember, getAllActiveCountry, getCityByStateId, getStatesByCountryId} from '../../../../network/api';
 import {getErrorMessage} from '../../../../utils/apiError';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../../types';
@@ -181,6 +181,42 @@ const AddPatient = ({
     return () => controller.abort();
   }, [countryId, patientType, stateRetry]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    setCities([]);
+    setCityError('');
+    setCityLoading(Boolean(stateId));
+
+    if (stateId) {
+      getCityByStateId(stateId, controller.signal)
+      .then(options => {
+        console.log('Selected state ID:', stateId);
+        console.log('City options:', options);
+        if (controller.signal.aborted) return;
+
+        setCities(
+          options.filter(item => item.city_name?.trim())
+          .map(item => ({
+            id: String(item.city_id),
+            name: item.city_name.trim(),
+          })),
+        );
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setCityError(getErrorMessage(error, 'Unable to load cities'));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setCityLoading(false);
+        }
+      });
+    }
+    return () => controller.abort();
+  }, [stateId, patientType, cityRetry]);
+
 
   const handlePdfUpload = async () => {
     try {
@@ -243,10 +279,68 @@ const AddPatient = ({
       showToast('Failed to select consent PDF', 'error');
     }
   };
-  const addPatientHandler = () => {
-    const payload = { patientType, ...form };
-    // Preserve the existing submission stub until an add-patient endpoint is provided.
-    console.log('Add Patient button pressed', payload);
+  const addPatientHandler = async() => {
+    // const payload = { patientType, ...form };
+    // // Preserve the existing submission stub until an add-patient endpoint is provided.
+    // console.log('Add Patient button pressed', payload);
+      if (saving) return;
+
+  // Use the actual parent ID supplied to this screen.
+  // const parentPatientId = route.params.patientDetails?.id;
+  const patientId = route.params.patientDetails?.id;
+
+  // if (!parentPatientId) {
+  //   showToast('Parent patient ID is missing', 'error');
+  //   return;
+  // }
+  if (!patientId) {
+  showToast('Patient ID is missing', 'error');
+  return;
+}
+
+    const data = new FormData();
+
+  // data.append('parentPatientId', String(parentPatientId));
+  data.append('patientId', String(patientId));
+  // data.append('patientType', patientType);
+  data.append('title', form.title);
+  data.append('firstName', form.firstName.trim());
+  data.append('lastName', form.lastName.trim());
+  data.append('dob', form.dob);
+  data.append('gender', form.gender);
+  data.append('phone', form.phone);
+  data.append('email', form.email.trim());
+  data.append('address', form.address);
+  data.append('countryId', String(form.countryId));
+  data.append('stateId', String(form.stateId));
+  data.append('cityId', String(form.cityId));
+  data.append('area', form.area);
+  data.append('pincode', form.pincode);
+  
+    if (form.selectedPdf) {
+    data.append('panel_pdf', {
+      uri: form.selectedPdf.uri,
+      name: form.selectedPdf.name,
+      type: form.selectedPdf.type || 'application/pdf',
+    } as any);
+  }
+    if (form.selectedConsentPdf) {
+    data.append('consent_pdf', {
+      uri: form.selectedConsentPdf.uri,
+      name: form.selectedConsentPdf.name,
+      type: form.selectedConsentPdf.type || 'application/pdf',
+    } as any);
+  }
+    try {
+    setSaving(true);
+    const result = await editFamilyMember(data);
+    console.log('FamilyMemberUpdated->',result);
+    showToast(result.message || 'Family member updated', 'success');
+  } catch (error) {
+    showToast(getErrorMessage(error, 'Unable to update family member'), 'error');
+  } finally {
+    setSaving(false);
+  }
   };
   return (
     <View style={styles.container}>
@@ -392,7 +486,9 @@ const AddPatient = ({
             </View>
           )}
 
-          {cities.length === 0 ? (
+          {/* {
+          cities.length === 0 ? 
+          (
             <Input
               label="City *"
               value={city}
@@ -402,7 +498,8 @@ const AddPatient = ({
                 setCityId('');
               }}
             />
-          ) : (
+          ) : 
+          (
             <CustomDropdown
               label="City *"
               value={city}
@@ -427,7 +524,35 @@ const AddPatient = ({
                 setCityId(selectedCity?.id || '');
               }}
             />
-          )}
+          )
+          } */}
+          <CustomDropdown 
+            label="City *"
+            value={cityId || cities.find(item => item.name === city)?.id || ''}
+            options={cities.map(item => ({
+              label: item.name,
+              value: item.id,
+            }))}
+            disabled={!stateId || cityLoading || saving}
+            placeholder={
+              !stateId
+                ? 'Select state first'
+                : cityLoading
+                ? 'Loading cities...'
+                : cityError
+                ? 'Unable to load cities'
+                : cities.length
+                 ? 'Select city'
+                 : 'No cities found'
+            }
+            onSelect={id => {
+              const selected = cities.find(item => item.id === id);
+              if (!selected) return;
+
+              setCity(selected.name);
+              setCityId(selected.id);
+            }}
+          />
           {!!cityError && (
             <View>
               <Text accessibilityRole="alert">{cityError}</Text>

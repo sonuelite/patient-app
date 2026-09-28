@@ -37,6 +37,150 @@ export async function getAllActiveCountry(signal?: AbortSignal): Promise<Country
   return response.data.data;
 }
 
+export interface CityOption {
+  city_id: number | string;
+  city_name: string;
+}
+
+export async function getCityByStateId(
+  stateId: string | number,
+  signal?: AbortSignal,
+): Promise<CityOption[]> {
+  const response = await apiClient.get<{
+    success?: boolean;
+    code?: number;
+    message?: string;
+    data?: CityOption[];
+  }>(
+    `/api/v1/patient/getCityByStateId/${encodeURIComponent(String(stateId))}`,
+    {
+      headers: {'x-entity-id': '1'},
+      signal,
+      timeout: 15000,
+    },
+  );
+  if (
+    response.data.success === false ||
+    (response.data.code !== undefined && response.data.code !== 200) || 
+    !Array.isArray(response.data.data)
+  ) {
+    throw new Error(response.data.message || 'Unable to load cities');
+  }
+  return response.data.data;
+}
+
+type UploadFile = {
+  uri: string;
+  name: string;
+  type: string;
+};
+
+export type EditFamilyMemberPayload = {
+  // parentPatientId: string | number;
+  patientId: string | number;
+  title: string;
+  firstName: string;
+  lastName: string;
+  dob: string;
+  age: string | number;
+  gender: string;
+  maritalStatus: string;
+  bloodGroup: string;
+  idProofType: string;
+  idProofNo: string;
+  relationOf: string;
+  relationName: string;
+  relationPhone: string;
+  phone: string;
+  email: string;
+  address: string;
+  countryId: string | number;
+  stateId: string | number;
+  cityId: string | number;
+  area: string;
+  pincode: string;
+  canShareData: 'Yes' | 'No';
+  membershipId: string;
+  patientType: string;
+  typeReference: string;
+  panelType: string;
+  panel: string;
+  policyNo: string;
+  trusteeStaff: string;
+  photo?: UploadFile | null;
+  panel_pdf?: UploadFile | null;
+  consent_pdf?: UploadFile | null;
+};
+
+// export async function editFamilyMember(
+//   formData: FormData
+// ) {
+//   // const formData = new FormData();
+
+//   // for (const [key, value] of Object.entries(payload)) {
+//   //   if (value == null) continue;
+
+//   //   if (key === 'photo' || key === 'panel_pdf' || key === 'consent_pdf') {
+//   //     formData.append(key, value as UploadFile);
+//   //   } else {
+//   //     formData.append(key, String(value));
+//   //   }
+//   // }
+
+//   const response = await apiClient.put(
+//     '/api/v1/patient/editFamilyMember',
+//     formData,
+//     {
+//       headers: {
+//         'x-entity-id': '1',
+//         'Content-Type': 'multipart/form-data',
+//       },
+//     },
+//   );
+// console.log('editFamilyMember response:', response.data);
+//   if (response.data?.success === false) {
+//     throw new Error(response.data.message || 'Unable to update family member');
+//   }
+//   return response.data;
+// }
+
+import axios from 'axios';
+
+export async function editFamilyMember(formData: FormData) {
+  try {
+    const response = await apiClient.put(
+      '/api/v1/patient/editFamilyMember',
+      formData,
+      {
+        headers: {
+          'x-entity-id': '1',
+          'Content-Type': 'multipart/form-data',
+        },
+      },
+    );
+
+    console.log('Edit family member response:', response.data);
+
+    if (response.data?.success === false) {
+      throw new Error(
+        response.data.message || 'Unable to update family member',
+      );
+    }
+
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.log('Edit family member HTTP status:', error.response?.status);
+      console.log('Edit family member error response:', error.response?.data);
+    } else {
+      console.log('Edit family member error:', error);
+    }
+
+    throw error;
+  }
+}
+
+
 export async function getPatientDetails(
   patientId: number,
   signal?: AbortSignal,
