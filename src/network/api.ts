@@ -3,6 +3,7 @@ import type {PatientLoginResponse} from '../types/auth';
 import type {PatientDetails, PatientDetailsResponse} from '../types/patientDetails';
 export {apiClient} from './client';
 import {normalizePatientStates, PatientStateOption} from '../utils/patientStateOptions';
+import axios from 'axios';
 
 export async function getStatesByCountryId(
   countryId: string | number, signal?: AbortSignal,
@@ -144,7 +145,6 @@ export type EditFamilyMemberPayload = {
 //   return response.data;
 // }
 
-import axios from 'axios';
 
 export async function editFamilyMember(formData: FormData) {
   try {
@@ -323,39 +323,58 @@ export async function getAllRelatedPatients(
   return response.data.data;
 }
 
-export interface AddFamilyMemberData {
-  parentPatientId: number;
-  firstName: string;
-  lastName: string;
-  dob: string;
-  gender: 'Male' | 'Female' | 'Other';
-  relationOf: string;
-}
+// export interface AddFamilyMemberData {
+//   parentPatientId: number;
+//   firstName: string;
+//   lastName: string;
+//   dob: string;
+//   gender: 'Male' | 'Female' | 'Other';
+//   relationOf: string;
+// }
 
-export interface AddFamilyMemberResponse {
-  success?: boolean;
-  message?: string;
-  data?: unknown;
-}
+// export interface AddFamilyMemberResponse {
+//   success?: boolean;
+//   message?: string;
+//   data?: unknown;
+// }
 
-export async function addFamilyMember(
-  data: AddFamilyMemberData,
-): Promise<AddFamilyMemberResponse> {
-  const formData = new FormData();
-  formData.append('parentPatientId', String(data.parentPatientId));
-  formData.append('firstName', data.firstName.trim());
-  formData.append('lastName', data.lastName.trim());
-  formData.append('dob', data.dob.trim());
-  formData.append('gender', data.gender);
-  formData.append('relationOf', data.relationOf.trim());
+// export async function addFamilyMember(
+//   data: AddFamilyMemberData,
+// ): Promise<AddFamilyMemberResponse> {
+//   const formData = new FormData();
+//   formData.append('parentPatientId', String(data.parentPatientId));
+//   formData.append('firstName', data.firstName.trim());
+//   formData.append('lastName', data.lastName.trim());
+//   formData.append('dob', data.dob.trim());
+//   formData.append('gender', data.gender);
+//   formData.append('relationOf', data.relationOf.trim());
 
-  const response = await apiClient.post<AddFamilyMemberResponse>(
-    '/api/v1/patient/addFamilyMember', formData,
-    {headers: {'Content-Type': 'multipart/form-data'}},
+//   const response = await apiClient.post<AddFamilyMemberResponse>(
+//     '/api/v1/patient/addFamilyMember', formData,
+//     {headers: {'Content-Type': 'multipart/form-data'}},
+//   );
+//   if (response.data.success === false) {
+//     throw new Error(response.data.message || 'Unable to add family member');
+//   }
+//   return response.data;
+// }
+
+export async function addFamilyMember(formData: FormData) {
+  const response = await apiClient.post(
+    '/api/v1/patient/addFamilyMember',
+    formData,
+    {
+      headers: {
+        'x-entity-id': '1',
+        'Content-Type': 'multipart/form-data',
+      },
+    },
   );
-  if (response.data.success === false) {
+
+  if (response.data?.success === false) {
     throw new Error(response.data.message || 'Unable to add family member');
   }
+
   return response.data;
 }
 

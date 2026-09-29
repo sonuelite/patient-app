@@ -148,6 +148,7 @@ const AddPatient = ({
   const [cityError, setCityError] = useState('');
   const [cityRetry, setCityRetry] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [relationOf, setRelationOf] = useState('');
   const { showToast } = useApp();
 
   useEffect(() => {
@@ -365,6 +366,14 @@ const AddPatient = ({
               }
             }}
           />
+          {patientType === 'Family Member' && (
+            <Input
+              label="Relation Of *"
+              value={relationOf}
+              onChangeText={setRelationOf}
+              placeholder="e.g. Son, Daughter, Spouse"
+            />
+          )}
         </Card>
         {/* Personal Information */}
 

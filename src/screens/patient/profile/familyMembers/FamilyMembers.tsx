@@ -41,6 +41,7 @@ import type {RelatedPatient} from '../../../../network/api';
 import {getErrorMessage} from '../../../../utils/apiError';
 import {useAppSelector} from '../../../../store/hooks';
 import {selectAccessToken, selectEntityId, selectPatientId} from '../../../../store/selectors';
+import axios from 'axios';
 
 interface FamilyMemberForm {
   firstName: string;
@@ -209,6 +210,7 @@ export default function FamilyMembersScreen() {
   };
 
   const addPatientHandler = async () => {
+    console.log('Add Patient button pressed');
     if (patientRequest.current && !patientRequest.current.signal.aborted) { return; }
     if (parentPatientId === null || !accessToken) {
       showFormToast('Please sign in again to add a patient', 'error');
@@ -219,14 +221,26 @@ export default function FamilyMembersScreen() {
     setLoadingPatient(true);
     try {
       const patientDetails = await getPatientDetails(parentPatientId, controller.signal);
+      console.log('Patient details fetched successfully:', patientDetails);
       if (!controller.signal.aborted) {
         navigation.navigate('AddPatient', {patientDetails});
       }
     } catch (error: unknown) {
-      if (!controller.signal.aborted) {
-        showFormToast(getErrorMessage(error, 'Unable to load patient details'), 'error');
-      }
-    } finally {
+  if (axios.isAxiosError(error)) {
+    console.log('Patient details request ID:', parentPatientId);
+    console.log('Patient details status:', error.response?.status);
+    console.log('Patient details error body:', error.response?.data);
+  } else {
+    console.log('Error fetching patient details:', error);
+  }
+
+  if (!controller.signal.aborted) {
+    showFormToast(
+      getErrorMessage(error, 'Unable to load patient details'),
+      'error',
+    );
+  }
+} finally {
       if (patientRequest.current === controller) {
         patientRequest.current = null;
         setLoadingPatient(false);
