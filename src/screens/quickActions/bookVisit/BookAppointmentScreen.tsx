@@ -60,6 +60,7 @@ import CustomButton from '../../../components/customButton/CustomButton';
 import { ColorConstants } from '../../../constants/colorConstants';
 import { Fontconstants } from '../../../constants/fontConstants';
 import { scale } from '../../../utils/scale';
+import Calendar from '../../../components/calendar/Calendar';
 
 type BookAppointmentNavigationProp =
   NativeStackNavigationProp<
@@ -263,34 +264,34 @@ export default function BookAppointmentScreen() {
     patient => patient.id === patientId,
   );
 
-  const days = useMemo(
-    () =>
-      Array.from({length: 7}, (_, index) => {
-        const currentDate = new Date(
-          Date.now() + index * 86400000,
-        );
+  // const days = useMemo(
+  //   () =>
+  //     Array.from({length: 7}, (_, index) => {
+  //       const currentDate = new Date(
+  //         Date.now() + index * 86400000,
+  //       );
 
-        return {
-          date: currentDate
-            .toISOString()
-            .split('T')[0],
+  //       return {
+  //         date: currentDate
+  //           .toISOString()
+  //           .split('T')[0],
 
-          label:
-            index === 0
-              ? 'Today'
-              : index === 1
-                ? 'Tomorrow'
-                : currentDate.toLocaleDateString(
-                    'en-US',
-                    {
-                      weekday: 'short',
-                      day: 'numeric',
-                    },
-                  ),
-        };
-      }),
-    [],
-  );
+  //         label:
+  //           index === 0
+  //             ? 'Today'
+  //             : index === 1
+  //               ? 'Tomorrow'
+  //               : currentDate.toLocaleDateString(
+  //                   'en-US',
+  //                   {
+  //                     weekday: 'short',
+  //                     day: 'numeric',
+  //                   },
+  //                 ),
+  //       };
+  //     }),
+  //   [],
+  // );
 
   const filteredDoctors = useMemo(() => {
     if (!department) {
@@ -536,6 +537,7 @@ export default function BookAppointmentScreen() {
           styles.scrollContent
         }
         keyboardShouldPersistTaps="handled"
+        scrollEnabled={step !== 3}
         showsVerticalScrollIndicator={false}>
         {/* Department */}
 
@@ -679,40 +681,50 @@ export default function BookAppointmentScreen() {
 
         {/* Date */}
 
-        {step === 3 ? (
+        {/* {step === 3 ? (
           <View>
             <Text style={styles.stepTitle}>
               Select Date
             </Text>
-
-            <View style={styles.dateRow}>
-              {days.map(day => (
-                <TouchableOpacity
-                  key={day.date}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    setDate(day.date);
+                <Calendar
+                  selected={date}
+                  initialScrollX={calendarScrollX.current}
+                  onScrollXChange={x => {
+                    calendarScrollX.current = x;
+                  }}
+                  onSelectDate={selectedDate => {
+                    setDate(selectedDate);
                     setTime(null);
                     setStep(4);
                   }}
-                  style={[
-                    styles.dateCard,
-                    date === day.date &&
-                      styles.dateCardActive,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.dateLabel,
-                      date === day.date &&
-                        styles.dateLabelActive,
-                    ]}>
-                    {day.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                />
           </View>
-        ) : null}
+        ) : null} */}
+        {/* <View style={{display: step === 3 ? 'flex' : 'none'}}>
+  <Text style={styles.stepTitle}>Select Date</Text>
+
+  <Calendar
+    selected={date}
+    onSelectDate={selectedDate => {
+      setDate(selectedDate);
+      setTime(null);
+      setStep(4);
+    }}
+  />
+</View> */}
+{/* Date: keep mounted so its horizontal scroll position is preserved */}
+<View style={{display: step === 3 ? 'flex' : 'none'}}>
+  <Text style={styles.stepTitle}>Select Date</Text>
+
+  <Calendar
+    selected={date}
+    onSelectDate={selectedDate => {
+      setDate(selectedDate);
+      setTime(null);
+      setStep(4);
+    }}
+  />
+</View>
 
         {/* Time */}
 

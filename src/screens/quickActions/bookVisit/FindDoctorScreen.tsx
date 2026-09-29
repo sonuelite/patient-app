@@ -47,37 +47,77 @@ export default function FindDoctorScreen() {
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
 
+  // useEffect(() => {
+  //   const controller = new AbortController();
+  //   dispatch(setDoctors([]));
+  //   setSelectedDepartment(null);
+  //   setError(null);
+  //   if (entityId === null) {
+  //     setLoading(false);
+  //     setError('Please select a hospital to view doctors.');
+  //     return () => controller.abort();
+  //   }
+  //   setLoading(true);
+  //   getAllDoctors(entityId, controller.signal)
+  //     .then(result => {
+  //       if (!controller.signal.aborted) {
+  //         dispatch(setDoctors(result.map(mapPatientDoctor)));
+  //       }
+  //     })
+  //     .catch(cause => {
+  //       if (!controller.signal.aborted) {
+  //         setError(
+  //           getErrorMessage(cause, 'Unable to load doctors. Please try again.'),
+  //         );
+  //       }
+  //     })
+  //     .finally(() => {
+  //       if (!controller.signal.aborted) {
+  //         setLoading(false);
+  //       }
+  //     });
+  //   return () => controller.abort();
+  // }, [entityId, retry, dispatch]);
+
   useEffect(() => {
-    const controller = new AbortController();
+  const controller = new AbortController();
+
+  const loadDoctors = async () => {
     dispatch(setDoctors([]));
     setSelectedDepartment(null);
     setError(null);
+
     if (entityId === null) {
       setLoading(false);
       setError('Please select a hospital to view doctors.');
-      return () => controller.abort();
+      return;
     }
+
     setLoading(true);
-    getAllDoctors(entityId, controller.signal)
-      .then(result => {
-        if (!controller.signal.aborted) {
-          dispatch(setDoctors(result.map(mapPatientDoctor)));
-        }
-      })
-      .catch(cause => {
-        if (!controller.signal.aborted) {
-          setError(
-            getErrorMessage(cause, 'Unable to load doctors. Please try again.'),
-          );
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      });
-    return () => controller.abort();
-  }, [entityId, retry, dispatch]);
+
+    try {
+      const result = await getAllDoctors(entityId, controller.signal);
+      console.log('Doctors fetched:', result);
+      if (!controller.signal.aborted) {
+        dispatch(setDoctors(result.map(mapPatientDoctor)));
+      }
+    } catch (cause) {
+      if (!controller.signal.aborted) {
+        setError(
+          getErrorMessage(cause, 'Unable to load doctors. Please try again.'),
+        );
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
+    }
+  };
+
+  loadDoctors();
+
+  return () => controller.abort();
+}, [entityId, retry, dispatch]);
 
   const departments = useMemo(
     () =>

@@ -276,7 +276,7 @@ export default function DoctorProfileScreen() {
             </View>
           </Card>
 
-          <Card style={styles.sectionCard}>
+          {/* <Card style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>
               Book a Slot
             </Text>
@@ -337,7 +337,7 @@ export default function DoctorProfileScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-          </Card>
+          </Card> */}
 
           {doctor.reviews.length > 0 ? (
             <Card style={styles.sectionCard}>

@@ -6,7 +6,7 @@ import {
   View,
 } from 'react-native';
 import React, { useEffect, useState } from 'react';
-import {editFamilyMember, getAllActiveCountry, getCityByStateId, getStatesByCountryId} from '../../../../network/api';
+import {addFamilyMember, editFamilyMember, getAllActiveCountry, getCityByStateId, getStatesByCountryId} from '../../../../network/api';
 import {getErrorMessage} from '../../../../utils/apiError';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../../types';
@@ -289,6 +289,7 @@ const AddPatient = ({
   // Use the actual parent ID supplied to this screen.
   // const parentPatientId = route.params.patientDetails?.id;
   const patientId = route.params.patientDetails?.id;
+  const parentPatientId = route.params.patientDetails?.id;
 
   // if (!parentPatientId) {
   //   showToast('Parent patient ID is missing', 'error');
@@ -298,11 +299,27 @@ const AddPatient = ({
   showToast('Patient ID is missing', 'error');
   return;
 }
+if (!parentPatientId) {
+  showToast('Parent patient ID is missing', 'error');
+  return;
+}
+
+if (patientType === 'Family Member' && !relationOf.trim()) {
+  showToast('Please enter the relation', 'error');
+  return;
+}
 
     const data = new FormData();
 
+    if (patientType === 'Family Member') {
+  data.append('parentPatientId', String(parentPatientId));
+  data.append('relationOf', relationOf.trim());
+} else {
+  data.append('patientId', String(parentPatientId));
+}
+
   // data.append('parentPatientId', String(parentPatientId));
-  data.append('patientId', String(patientId));
+  // data.append('patientId', String(patientId));
   // data.append('patientType', patientType);
   data.append('title', form.title);
   data.append('firstName', form.firstName.trim());
@@ -334,11 +351,23 @@ const AddPatient = ({
   }
     try {
     setSaving(true);
-    const result = await editFamilyMember(data);
-    console.log('FamilyMemberUpdated->',result);
-    showToast(result.message || 'Family member updated', 'success');
+    // const result = await editFamilyMember(data);
+    const result =
+  patientType === 'Family Member'
+    ? await addFamilyMember(data)
+    : await editFamilyMember(data);
+    console.log('AddPatient response->',result);
+    // showToast(result.message || 'Family member updated', 'success');
+    showToast(
+  result.message ||
+    (patientType === 'Family Member'
+      ? 'Family member added successfully'
+      : 'Patient updated successfully'),
+  'success',
+);
   } catch (error) {
-    showToast(getErrorMessage(error, 'Unable to update family member'), 'error');
+    console.log('AddPatient error->',error);
+    showToast(getErrorMessage(error, 'Unable to update member'), 'error');
   } finally {
     setSaving(false);
   }

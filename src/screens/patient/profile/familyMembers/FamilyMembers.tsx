@@ -333,7 +333,7 @@ export default function FamilyMembersScreen() {
                   </Text>
                 </View>
 
-                <TouchableOpacity
+                {/* <TouchableOpacity
                   activeOpacity={0.7}
                   style={styles.switchButton}
                   onPress={() =>
@@ -347,13 +347,13 @@ export default function FamilyMembersScreen() {
                   <Text style={styles.switchText}>
                     {currentPatientId === familyMember.id ? 'Selected' : 'Switch'}
                   </Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </View>
             </Card>
           ))
         )}
 
-        <CustomButton
+        {/* <CustomButton
           title="Add Family Member"
           onPress={() => setShowAdd(true)}
           disable={saving}
@@ -369,7 +369,7 @@ export default function FamilyMembersScreen() {
               style={styles.addMemberIcon}
             />
           }
-        />
+        /> */}
         <CustomButton
           title={loadingPatient ? 'Loading patient...' : 'Add Patient'}
           onPress={addPatientHandler}
@@ -389,7 +389,7 @@ export default function FamilyMembersScreen() {
         />
       </ScrollView>
 
-      <BottomSheet
+      {/* <BottomSheet
         visible={showAdd}
         dismissible={!saving}
         onClose={() => {
@@ -456,9 +456,8 @@ export default function FamilyMembersScreen() {
             />
           </ScrollView>
         </KeyboardAvoidingView>
-        {/* Render toast errors above the native bottom-sheet modal. */}
         {showAdd && <Toast />}
-      </BottomSheet>
+      </BottomSheet> */}
     </View>
   );
 }
