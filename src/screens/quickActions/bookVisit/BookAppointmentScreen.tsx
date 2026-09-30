@@ -78,7 +78,7 @@ const STEPS = [
   'Doctor',
   'Type',
   'Date',
-  'Time',
+  // 'Time',
   'Patient',
   'Reason',
   'Summary',
@@ -206,6 +206,7 @@ export default function BookAppointmentScreen() {
   const [step, setStep] = useState(
     doctorId ? 2 : 0,
   );
+  const visibleStep = step > 4 ? step - 1 : step;
 
   const [department, setDepartment] =
     useState<string | null>(
@@ -312,7 +313,8 @@ export default function BookAppointmentScreen() {
     if (bookedAppointment) { navigation.goBack(); return; }
     // if (step > 0 && step < 9) {
     if (step > 2 && step < 9) {
-      setStep(previousStep => previousStep - 1);
+      // setStep(previousStep => previousStep - 1);
+      setStep(step === 5 ? 3 : step - 1);
       return;
     }
 
@@ -336,13 +338,18 @@ export default function BookAppointmentScreen() {
       return;
     }
 
-    if (step === 4 && !time) {
-      showToast(
-        'Please select a time slot',
-        'error',
-      );
-      return;
-    }
+    // if (step === 4 && !time) {
+    //   showToast(
+    //     'Please select a time slot',
+    //     'error',
+    //   );
+    //   return;
+    // }
+      // Step 4 (Time) is hidden. Step 5 is Patient.
+  if (step === 3) {
+    setStep(5);
+    return;
+  }
 
     if (step === 5 && (loadingPatients || patientsError || !selectedPatient)) {
       showToast(
@@ -528,7 +535,10 @@ export default function BookAppointmentScreen() {
         </Text>
       </View>
 
-      <Stepper steps={STEPS} current={step} />
+      <Stepper steps={STEPS} 
+      // current={step} 
+      current={visibleStep}
+      />
     </View>
 
       <ScrollView
@@ -537,7 +547,7 @@ export default function BookAppointmentScreen() {
           styles.scrollContent
         }
         keyboardShouldPersistTaps="handled"
-        scrollEnabled={step !== 3}
+        nestedScrollEnabled
         showsVerticalScrollIndicator={false}>
         {/* Department */}
 
@@ -712,23 +722,25 @@ export default function BookAppointmentScreen() {
     }}
   />
 </View> */}
-{/* Date: keep mounted so its horizontal scroll position is preserved */}
-<View style={{display: step === 3 ? 'flex' : 'none'}}>
-  <Text style={styles.stepTitle}>Select Date</Text>
-
-  <Calendar
-    selected={date}
-    onSelectDate={selectedDate => {
-      setDate(selectedDate);
-      setTime(null);
-      setStep(4);
-    }}
-  />
-</View>
+        {/* Keep the date in screen state, but reset scroll responders on return. */}
+        {step === 3 ? (
+          <View>
+            <Text style={styles.stepTitle}>Select Date</Text>
+            <Calendar
+              selected={date}
+              onSelectDate={selectedDate => {
+                setDate(selectedDate);
+                setTime(null);
+                // setStep(4);
+                setStep(5);
+              }}
+            />
+          </View>
+        ) : null}
 
         {/* Time */}
 
-        {step === 4 ? (
+        {/* {step === 4 ? (
           <View>
             <Text style={styles.stepTitle}>
               Select Time Slot
@@ -760,7 +772,7 @@ export default function BookAppointmentScreen() {
               ))}
             </View>
           </View>
-        ) : null}
+        ) : null} */}
 
         {/* Patient */}
 

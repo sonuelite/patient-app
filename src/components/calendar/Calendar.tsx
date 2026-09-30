@@ -31,7 +31,7 @@ const Calendar = ({selected, onSelectDate}: CalendarProps) => {
         horizontal
         nestedScrollEnabled
         decelerationRate="fast"
-        disableIntervalMomentum
+        keyboardShouldPersistTaps="handled"
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}>
         {dates.map(fullDate => {

@@ -123,66 +123,66 @@ export default function FamilyMembersScreen() {
     value: FamilyMemberForm[K],
   ) => setForm(prev => ({...prev, [key]: value}));
 
-  const handleContinue = async () => {
-    if (submissionPending.current) { return; }
-    if (
-      !form.firstName.trim() ||
-      !form.lastName.trim() ||
-      !form.dob.trim() ||
-      !form.relation.trim()
-    ) {
-      showFormToast('Please fill all required fields', 'error');
-      return;
-    }
+  // const handleContinue = async () => {
+  //   if (submissionPending.current) { return; }
+  //   if (
+  //     !form.firstName.trim() ||
+  //     !form.lastName.trim() ||
+  //     !form.dob.trim() ||
+  //     !form.relation.trim()
+  //   ) {
+  //     showFormToast('Please fill all required fields', 'error');
+  //     return;
+  //   }
 
-    const dob = form.dob.trim();
-    const birthDate = new Date(`${dob}T00:00:00`);
-    const [year, month, day] = dob.split('-').map(Number);
-    if (
-      !/^\d{4}-\d{2}-\d{2}$/.test(dob) ||
-      Number.isNaN(birthDate.getTime()) ||
-      birthDate.getFullYear() !== year ||
-      birthDate.getMonth() !== month - 1 ||
-      birthDate.getDate() !== day ||
-      birthDate > new Date()
-    ) {
-      showFormToast('Please enter a valid date of birth (YYYY-MM-DD)', 'error');
-      return;
-    }
+  //   const dob = form.dob.trim();
+  //   const birthDate = new Date(`${dob}T00:00:00`);
+  //   const [year, month, day] = dob.split('-').map(Number);
+  //   if (
+  //     !/^\d{4}-\d{2}-\d{2}$/.test(dob) ||
+  //     Number.isNaN(birthDate.getTime()) ||
+  //     birthDate.getFullYear() !== year ||
+  //     birthDate.getMonth() !== month - 1 ||
+  //     birthDate.getDate() !== day ||
+  //     birthDate > new Date()
+  //   ) {
+  //     showFormToast('Please enter a valid date of birth (YYYY-MM-DD)', 'error');
+  //     return;
+  //   }
 
-    if (parentPatientId === null || !accessToken) {
-      showFormToast('Please sign in again to add a family member', 'error');
-      return;
-    }
-    if (entityId === null) {
-      showFormToast('Please select an entity before adding a family member', 'error');
-      return;
-    }
+  //   if (parentPatientId === null || !accessToken) {
+  //     showFormToast('Please sign in again to add a family member', 'error');
+  //     return;
+  //   }
+  //   if (entityId === null) {
+  //     showFormToast('Please select an entity before adding a family member', 'error');
+  //     return;
+  //   }
 
-    submissionPending.current = true;
-    setSaving(true);
-    Keyboard.dismiss();
-    try {
-      const response = await addFamilyMember({
-        parentPatientId,
-        firstName: form.firstName,
-        lastName: form.lastName,
-        dob,
-        gender: form.gender,
-        relationOf: form.relation,
-      });
-      console.log('Family member added successfully:', response);
-      setForm(initialForm);
-      setShowAdd(false);
-      setSuccessMessage(response.message || 'Family member added successfully');
-      await loadMembers();
-    } catch (error: unknown) {
-      showFormToast(getErrorMessage(error, 'Unable to add family member'), 'error');
-    } finally {
-      submissionPending.current = false;
-      setSaving(false);
-    }
-  };
+  //   submissionPending.current = true;
+  //   setSaving(true);
+  //   Keyboard.dismiss();
+  //   try {
+  //     const response = await addFamilyMember({
+  //       parentPatientId,
+  //       firstName: form.firstName,
+  //       lastName: form.lastName,
+  //       dob,
+  //       gender: form.gender,
+  //       relationOf: form.relation,
+  //     });
+  //     console.log('Family member added successfully:', response);
+  //     setForm(initialForm);
+  //     setShowAdd(false);
+  //     setSuccessMessage(response.message || 'Family member added successfully');
+  //     await loadMembers();
+  //   } catch (error: unknown) {
+  //     showFormToast(getErrorMessage(error, 'Unable to add family member'), 'error');
+  //   } finally {
+  //     submissionPending.current = false;
+  //     setSaving(false);
+  //   }
+  // };
 
   const records = relatedPatients.map(item => ({
     id: String(item.patient_id),
@@ -299,22 +299,25 @@ export default function FamilyMembersScreen() {
           Family Members ({familyMembers.length})
         </Text>
 
-        {familyMembers.length === 0 ? (!loadingMembers && !loadError && (
-          <EmptyState
-            icon={
-              <Users
-                size={48}
-                color={Colors.neutral[300]}
-              />
-            }
-            title="No family members"
-            message="Add family members to manage their healthcare."
-            action={{
-              label: 'Add Member',
-              onPress: () => setShowAdd(true),
-            }}
-          />
-        )) : (
+        {familyMembers.length === 0 ? 
+        // (!loadingMembers && !loadError && (
+        //   <EmptyState
+        //     icon={
+        //       <Users
+        //         size={48}
+        //         color={Colors.neutral[300]}
+        //       />
+        //     }
+        //     title="No family members"
+        //     message="Add family members to manage their healthcare."
+        //     action={{
+        //       label: 'Add Member',
+        //       onPress: () => setShowAdd(true),
+        //     }}
+        //   />
+        // ))
+        null
+         : (
           familyMembers.map(familyMember => (
             <Card
               key={familyMember.id}
