@@ -57,7 +57,7 @@ export default function PatientProfileScreen() {
 
   const {
     currentPatientId,
-    patients,
+    // patients,
     showToast,
     medicationReminders,
   } = useApp();
@@ -65,12 +65,17 @@ export default function PatientProfileScreen() {
   const [logoutLoading, setLogoutLoading] = useState(false);
   const logoutPending = useRef(false);
 
-  const patient = patients.find(p => p.id === currentPatientId);
-  const account = authPatient && String(authPatient.patient_id) === currentPatientId
-    ? authPatient : null;
-  const profileName = account
-    ? `${account.first_name} ${account.last_name}`.trim()
-    : patient?.name ?? 'Patient';
+  // const patient = patients.find(p => p.id === currentPatientId);
+  // const account = authPatient && String(authPatient.patient_id) === currentPatientId
+  //   ? authPatient : null;
+  // const profileName = account
+  //   ? `${account.first_name} ${account.last_name}`.trim()
+  //   : patient?.name ?? 'Patient';
+  const profileName =
+  [authPatient?.first_name, authPatient?.last_name]
+    .filter(Boolean)
+    .join(' ')
+    .trim() || 'Patient';
 
   const menuItems: Array<{
     icon: typeof User; label: string;
@@ -185,7 +190,7 @@ export default function PatientProfileScreen() {
         >
           <View style={styles.profileRow}>
             <Avatar
-              uri={account ? account.photo ?? undefined : patient?.photo}
+              uri={authPatient?.photo ?? undefined}
               size={72}
               name={profileName}
             />
@@ -196,13 +201,17 @@ export default function PatientProfileScreen() {
               </Text>
 
               <Text style={styles.profileId}>
-                {account?.uhid ?? patient?.id ?? 'Profile unavailable'}
+                {/* {account?.uhid ?? patient?.id ?? 'Profile unavailable'}
                 {' · '}{account?.gender ?? patient?.gender ?? '—'}
-                {!account && patient ? `, ${patient.age}y` : ''}
+                {!account && patient ? `, ${patient.age}y` : ''} */}
+                  {authPatient?.uhid ?? '—'}
+                  {' · '}
+                  {authPatient?.gender ?? '—'}
               </Text>
 
               <Text style={styles.profileBlood}>
-                Blood: {account ? '—' : patient?.bloodGroup ?? '—'}
+                {/* Blood: {account ? '—' : patient?.bloodGroup ?? '—'} */}
+                Blood: —
               </Text>
             </View>
           </View>
@@ -215,7 +224,8 @@ export default function PatientProfileScreen() {
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {account ? '—' : patient?.vitals.length ?? '—'}
+                {/* {account ? '—' : patient?.vitals.length ?? '—'} */}
+                {'-'}
               </Text>
 
               <Text style={styles.statLabel}>
@@ -227,7 +237,8 @@ export default function PatientProfileScreen() {
 
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {account ? '—' : patient?.conditions.length ?? '—'}
+                {/* {account ? '—' : patient?.conditions.length ?? '—'} */}
+                {'-'}
               </Text>
 
               <Text style={styles.statLabel}>
@@ -239,7 +250,8 @@ export default function PatientProfileScreen() {
 
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {account ? '—' : patient?.familyMembers.length ?? '—'}
+                {/* {account ? '—' : patient?.familyMembers.length ?? '—'} */}
+                {'-'}
               </Text>
 
               <Text style={styles.statLabel}>

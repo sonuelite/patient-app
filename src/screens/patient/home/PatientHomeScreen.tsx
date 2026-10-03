@@ -61,10 +61,23 @@ import {
 } from 'lucide-react-native';
 
 import {useApp} from '../../../context/AppContext';
+import { useAppSelector } from '../../../store/hooks';
+import { selectPatient } from '../../../store/selectors';
 
 export default function PatientHomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+
+  const authPatient = useAppSelector(selectPatient);
+
+    const patientName =
+    [authPatient?.first_name, authPatient?.last_name]
+      .filter(Boolean)
+      .join(' ')
+      .trim() || 'Patient';
+
+  const patientUhid = authPatient?.uhid || '—';
+  const patientPhoto = authPatient?.photo || null;
 
   const {
     currentPatientId,
@@ -184,28 +197,28 @@ export default function PatientHomeScreen() {
     },
   ];
 
-  const apptSteps = upcomingAppt
-    ? [
-        {
-          step: 'Booked',
-          done: true,
-        },
-        {
-          step: 'Confirmed',
-          done:
-            upcomingAppt.status === 'confirmed' ||
-            upcomingAppt.status === 'checked-in',
-        },
-        {
-          step: 'Check-In',
-          done: upcomingAppt.status === 'checked-in',
-        },
-        {
-          step: 'Consult',
-          done: false,
-        },
-      ]
-    : [];
+  // const apptSteps = upcomingAppt
+  //   ? [
+  //       {
+  //         step: 'Booked',
+  //         done: true,
+  //       },
+  //       {
+  //         step: 'Confirmed',
+  //         done:
+  //           upcomingAppt.status === 'confirmed' ||
+  //           upcomingAppt.status === 'checked-in',
+  //       },
+  //       {
+  //         step: 'Check-In',
+  //         done: upcomingAppt.status === 'checked-in',
+  //       },
+  //       {
+  //         step: 'Consult',
+  //         done: false,
+  //       },
+  //     ]
+  //   : [];
 
   return (
     <View style={styles.container}>
@@ -229,12 +242,14 @@ export default function PatientHomeScreen() {
               </Text>
 
               <Text style={styles.patientName}>
-                {patient.name}
+                {/* {patient.name} */}
+                  {patientName}
               </Text>
 
               <View style={styles.headerIdRow}>
                 <Text style={styles.patientId}>
-                  ID: {patient.id}
+                  {/* ID: {patient.id} */}
+                  UHID: {patientUhid}
                 </Text>
 
                 <View style={styles.bloodBadge}>
@@ -250,7 +265,7 @@ export default function PatientHomeScreen() {
               </View>
             </View>
 
-            <View style={styles.headerRight}>
+            {/* <View style={styles.headerRight}>
               <TouchableOpacity
                 onPress={() => goTo('Notifications')}
                 style={styles.bellWrap}>
@@ -275,7 +290,41 @@ export default function PatientHomeScreen() {
                   style={styles.avatar}
                 />
               </TouchableOpacity>
-            </View>
+            </View> */}
+            <View style={styles.headerRight}>
+  <TouchableOpacity
+    onPress={() => goTo('Notifications')}
+    style={styles.bellWrap}>
+    <Bell
+      size={22}
+      color={Colors.neutral[0]}
+    />
+  </TouchableOpacity>
+
+  <TouchableOpacity onPress={() => goTo('Profile')}>
+    {patientPhoto ? (
+      <Image
+        source={{uri: patientPhoto}}
+        style={styles.avatar}
+      />
+    ) : (
+      <View
+        style={[
+          styles.avatar,
+          {
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: Colors.primary[600],
+          },
+        ]}>
+        <UserCheck
+          size={22}
+          color={Colors.neutral[0]}
+        />
+      </View>
+    )}
+  </TouchableOpacity>
+</View>
           </View>
         </View>
 
