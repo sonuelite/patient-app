@@ -15,6 +15,9 @@ import FindDoctorScreen from '../screens/quickActions/bookVisit/FindDoctorScreen
 import DoctorProfileScreen from '../screens/quickActions/bookVisit/DoctorProfileScreen';
 import BookAppointmentScreen from '../screens/quickActions/bookVisit/BookAppointmentScreen';
 import AddPatient from '../screens/patient/profile/familyMembers/AddPatient';
+import PharmacyScreen from '../screens/quickActions/pharmacy/Pharmacy';
+import EmergencyScreen from '../screens/quickActions/emergency/Emergency';
+import BillingScreen from '../screens/quickActions/billing/Billing';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -48,6 +51,9 @@ const StackNavigator = () => {
           <Stack.Screen name="DoctorProfile" component={DoctorProfileScreen}/>
           <Stack.Screen name="BookAppointment" component={BookAppointmentScreen}/>
           <Stack.Screen name="AddPatient" component={AddPatient} />
+          <Stack.Screen name="PharmacyScreen" component={PharmacyScreen}/>
+          <Stack.Screen name="EmergencyScreen" component={EmergencyScreen}/>
+          <Stack.Screen name="BillingScreen" component={BillingScreen}/>
         </>
       ) : (
         <>

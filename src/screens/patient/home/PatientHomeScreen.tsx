@@ -163,37 +163,37 @@ export default function PatientHomeScreen() {
       label: 'My Records',
       icon: FileText,
       color: Colors.accent[600],
-      route: 'Records',
+      route: 'records',
     },
     {
       label: 'Pharmacy',
       icon: ShoppingBag,
       color: Colors.teal[600],
-      route: 'Pharmacy',
+      route: 'PharmacyScreen',
     },
     {
       label: 'Lab Tests',
       icon: FlaskConical,
       color: Colors.warning[600],
-      route: 'Records',
+      route: 'records',
     },
     {
       label: 'Billing',
       icon: Receipt,
       color: Colors.secondary[600],
-      route: 'Billing',
+      route: 'BillingScreen',
     },
     {
       label: 'Emergency',
       icon: Siren,
       color: Colors.error[600],
-      route: 'Emergency',
+      route: 'EmergencyScreen',
     },
     {
       label: 'My Profile',
       icon: UserCheck,
       color: Colors.neutral[600],
-      route: 'Profile',
+      route: 'profile',
     },
   ];
 

@@ -42,6 +42,9 @@ export type RootStackParamList = {
     | undefined;
 
     AddPatient: {patientDetails: PatientDetails};
+    PharmacyScreen: undefined;
+    EmergencyScreen: undefined;
+    BillingScreen: undefined;
 };
 
 export type UserRole = 'patient' | 'doctor' | 'admin';
