@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useCallback, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 
 import {
   Colors,
@@ -58,11 +59,14 @@ import {
   BedDouble,
   UserCheck,
   MapPin,
+  ChevronDown,
 } from 'lucide-react-native';
 
 import {useApp} from '../../../context/AppContext';
 import { useAppSelector } from '../../../store/hooks';
-import { selectPatient } from '../../../store/selectors';
+import {selectPatient, selectPatientId, selectAccessToken} from '../../../store/selectors';
+import {getAllRelatedPatients, type RelatedPatient} from '../../../network/api';
+import {getErrorMessage} from '../../../utils/apiError';
 
 export default function PatientHomeScreen() {
   const insets = useSafeAreaInsets();
@@ -70,17 +74,20 @@ export default function PatientHomeScreen() {
 
   const authPatient = useAppSelector(selectPatient);
 
-    const patientName =
-    [authPatient?.first_name, authPatient?.last_name]
-      .filter(Boolean)
-      .join(' ')
-      .trim() || 'Patient';
-
-  const patientUhid = authPatient?.uhid || '—';
-  const patientPhoto = authPatient?.photo || null;
+  const parentPatientId = useAppSelector(selectPatientId);
+  const accessToken = useAppSelector(selectAccessToken);
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [memberState, setMemberState] = useState<{
+    ownerId: number | null;
+    records: RelatedPatient[];
+  }>({ownerId: null, records: []});
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [membersError, setMembersError] = useState<string | null>(null);
+  const memberRequest = useRef<AbortController | null>(null);
 
   const {
     currentPatientId,
+    setCurrentPatientId,
     patients,
     appointments,
     prescriptions,
@@ -90,47 +97,101 @@ export default function PatientHomeScreen() {
     medicationReminders,
   } = useApp();
 
-  const patient =
-    patients.find(p => p.id === currentPatientId) || patients[0];
+  const loadMembers = useCallback(async () => {
+    memberRequest.current?.abort();
+    const controller = new AbortController();
+    memberRequest.current = controller;
+    setMembersError(null);
+    if (parentPatientId === null || !accessToken) {
+      setMemberState({ownerId: null, records: []});
+      setLoadingMembers(false);
+      return;
+    }
+    setLoadingMembers(true);
+    try {
+      const records = await getAllRelatedPatients(parentPatientId, controller.signal);
+      if (!controller.signal.aborted) {
+        setMemberState({ownerId: parentPatientId, records});
+      }
+    } catch (error: unknown) {
+      if (!controller.signal.aborted) {
+        setMembersError(getErrorMessage(error, 'Unable to load family members'));
+      }
+    } finally {
+      if (!controller.signal.aborted) { setLoadingMembers(false); }
+    }
+  }, [parentPatientId, accessToken]);
+
+  useFocusEffect(useCallback(() => {
+    setSelectorOpen(false);
+    loadMembers();
+    return () => { memberRequest.current?.abort(); };
+  }, [loadMembers]));
+
+  const relatedPatients = memberState.ownerId === parentPatientId && accessToken
+    ? memberState.records : [];
+  const profileOptions = relatedPatients.map(member => ({
+    id: String(member.patient_id),
+    name: [member.first_name, member.last_name].filter(Boolean).join(' ').trim() || 'Patient',
+    uhid: member.uhid,
+    photo: member.photo,
+    relation: member.relation_of || 'Family member',
+  }));
+  if (authPatient && !profileOptions.some(option => option.id === String(parentPatientId))) {
+    profileOptions.unshift({
+      id: String(parentPatientId),
+      name: [authPatient.first_name, authPatient.last_name].filter(Boolean).join(' ').trim() || 'Patient',
+      uhid: authPatient.uhid,
+      photo: authPatient.photo,
+      relation: 'Self',
+    });
+  }
+  const selectedProfile = profileOptions.find(option => option.id === currentPatientId)
+    || profileOptions.find(option => option.id === String(parentPatientId));
+  const dashboardPatientId = selectedProfile?.id || '';
+  const patient = patients.find(p => p.id === dashboardPatientId);
+  const patientName = selectedProfile?.name || 'Patient';
+  const patientUhid = selectedProfile?.uhid || '—';
+  const patientPhoto = selectedProfile?.photo || null;
 
   const upcomingAppt = appointments.find(
     a =>
-      a.patientId === patient.id &&
+      a.patientId === dashboardPatientId &&
       (a.status === 'confirmed' || a.status === 'checked-in'),
   );
 
   const latestRx = prescriptions.find(
-    p => p.patientId === patient.id,
+    p => p.patientId === dashboardPatientId,
   );
 
   const latestLab = labOrders.find(
-    l => l.patientId === patient.id,
+    l => l.patientId === dashboardPatientId,
   );
 
   const latestBill = bills.find(
-    b => b.patientId === patient.id,
+    b => b.patientId === dashboardPatientId,
   );
 
   const unreadCount = notifications.filter(
-    n => n.patientId === patient.id && !n.read,
+    n => n.patientId === dashboardPatientId && !n.read,
   ).length;
 
-  const latestVital = patient.vitals[0];
+  const latestVital = patient?.vitals[0];
 
   const activeMeds = medicationReminders.filter(
-    m => m.patientId === patient.id && m.active,
+    m => m.patientId === dashboardPatientId && m.active,
   );
 
   const pendingLabs = labOrders.filter(
     l =>
-      l.patientId === patient.id &&
+      l.patientId === dashboardPatientId &&
       (l.status === 'ordered' ||
         l.status === 'collected' ||
         l.status === 'processing'),
   );
 
   const unpaidBills = bills.filter(
-    b => b.patientId === patient.id && b.status !== 'paid',
+    b => b.patientId === dashboardPatientId && b.status !== 'paid',
   );
 
   const hour = new Date().getHours();
@@ -241,10 +302,15 @@ export default function PatientHomeScreen() {
                 {greeting},
               </Text>
 
-              <Text style={styles.patientName}>
-                {/* {patient.name} */}
-                  {patientName}
-              </Text>
+              <TouchableOpacity
+                style={styles.patientSelector}
+                accessibilityRole="button"
+                accessibilityLabel={`Select patient, current patient ${patientName}`}
+                accessibilityState={{expanded: selectorOpen}}
+                onPress={() => setSelectorOpen(open => !open)}>
+                <Text style={styles.patientName} numberOfLines={1}>{patientName}</Text>
+                <ChevronDown size={20} color={Colors.neutral[0]} />
+              </TouchableOpacity>
 
               <View style={styles.headerIdRow}>
                 <Text style={styles.patientId}>
@@ -252,7 +318,7 @@ export default function PatientHomeScreen() {
                   UHID: {patientUhid}
                 </Text>
 
-                <View style={styles.bloodBadge}>
+                {patient?.bloodGroup && <View style={styles.bloodBadge}>
                   <Droplet
                     size={10}
                     color={Colors.error[500]}
@@ -261,7 +327,7 @@ export default function PatientHomeScreen() {
                   <Text style={styles.bloodText}>
                     {patient.bloodGroup}
                   </Text>
-                </View>
+                </View>}
               </View>
             </View>
 
@@ -326,6 +392,39 @@ export default function PatientHomeScreen() {
   </TouchableOpacity>
 </View>
           </View>
+          {selectorOpen && (
+            <View style={styles.profileDropdown}>
+              <Text style={styles.selectorTitle}>Select patient</Text>
+              {loadingMembers && <ActivityIndicator color={Colors.primary[600]} />}
+              {membersError && (
+                <View>
+                  <Text style={styles.selectorError}>{membersError}</Text>
+                  <TouchableOpacity accessibilityRole="button" onPress={loadMembers}>
+                    <Text style={styles.retryText}>Retry</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <ScrollView style={styles.profileList} nestedScrollEnabled>
+                {profileOptions.map(option => (
+                  <TouchableOpacity
+                    key={option.id}
+                    accessibilityRole="button"
+                    accessibilityState={{selected: option.id === dashboardPatientId}}
+                    style={[styles.profileOption, option.id === dashboardPatientId && styles.selectedOption]}
+                    onPress={() => {
+                      setCurrentPatientId(option.id);
+                      setSelectorOpen(false);
+                    }}>
+                    <View style={styles.profileInfo}>
+                      <Text style={styles.profileName}>{option.name}</Text>
+                      <Text style={styles.profileMeta}>{option.relation} · UHID: {option.uhid || '—'}</Text>
+                    </View>
+                    {option.id === dashboardPatientId && <CheckCircle size={20} color={Colors.primary[600]} />}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
 
         <View style={styles.body}>
@@ -335,7 +434,7 @@ export default function PatientHomeScreen() {
             <StatTile
               label="Blood Pressure"
               // value={latestVital ? latestVital.bp : '--'}
-              value={0}
+              value={latestVital?.bp || '--'}
               icon={
                 <Heart
                   size={18}
@@ -353,7 +452,7 @@ export default function PatientHomeScreen() {
               //     ? `${latestVital.spo2}%`
               //     : '--'
               // }
-                value={`${0}%`}
+                value={latestVital ? `${latestVital.spo2}%` : '--'}
               icon={
                 <Wind
                   size={18}
@@ -371,7 +470,7 @@ export default function PatientHomeScreen() {
               //     ? `${latestVital.bloodSugar}`
               //     : '--'
               // }
-                  value={0}
+                  value={latestVital ? `${latestVital.bloodSugar}` : '--'}
               icon={
                 <Droplet
                   size={18}
@@ -1043,6 +1142,17 @@ export default function PatientHomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  patientSelector: {flexDirection: 'row', alignItems: 'center', gap: Spacing.sm},
+  profileDropdown: {marginTop: Spacing.md, padding: Spacing.sm, borderRadius: Radius.md, backgroundColor: Colors.neutral[0]},
+  selectorTitle: {padding: Spacing.sm, color: Colors.neutral[600], fontWeight: FontWeight.semibold},
+  profileList: {maxHeight: 260},
+  profileOption: {flexDirection: 'row', alignItems: 'center', padding: Spacing.md, borderRadius: Radius.md, gap: Spacing.sm},
+  selectedOption: {backgroundColor: Colors.primary[50]},
+  profileInfo: {flex: 1},
+  profileName: {color: Colors.neutral[900], fontSize: FontSize.base, fontWeight: FontWeight.semibold},
+  profileMeta: {color: Colors.neutral[500], fontSize: FontSize.xs, marginTop: 4},
+  selectorError: {color: Colors.error[600], padding: Spacing.sm},
+  retryText: {color: Colors.primary[600], padding: Spacing.sm, fontWeight: FontWeight.semibold},
   container: {
     flex: 1,
     backgroundColor: Colors.neutral[50],
@@ -1087,6 +1197,7 @@ const styles = StyleSheet.create({
   },
 
   patientName: {
+    flexShrink: 1,
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
     color: Colors.neutral[0],

@@ -521,3 +521,35 @@ export const verifyPatientOtp = async (
 
   return response.data;
 };
+
+export const getMyAppointments = async (
+  patientId: number | string,
+  signal?: AbortSignal,
+) => {
+  const response = await apiClient.get(
+    '/api/v1/patient/getMyAppointments',
+    {
+      params: {
+        patient_id: patientId,
+      },
+      signal,
+    },
+  );
+
+  const result = response.data;
+
+  if (
+    result?.success === false ||
+    (result?.code !== undefined && result.code !== 200)
+  ) {
+    throw new Error(
+      result?.message || 'Unable to fetch appointments',
+    );
+  }
+
+  if (!Array.isArray(result?.data)) {
+    throw new Error('Invalid appointments response');
+  }
+
+  return result.data;
+};

@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -17,15 +17,9 @@ import {
   Shadows,
 } from '../../constants/theme';
 
-import {
-  Star,
-  MapPin,
-  Video,
-} from 'lucide-react-native';
+import { Star, MapPin, Video } from 'lucide-react-native';
 
-import type {
-  Doctor,
-} from '../../types';
+import type { Doctor } from '../../types';
 
 export function Avatar({
   uri,
@@ -39,7 +33,7 @@ export function Avatar({
   if (uri) {
     return (
       <Image
-        source={{uri}}
+        source={{ uri }}
         style={{
           width: size,
           height: size,
@@ -65,14 +59,16 @@ export function Avatar({
           height: size,
           borderRadius: size / 2,
         },
-      ]}>
+      ]}
+    >
       <Text
         style={[
           styles.avatarText,
           {
             fontSize: size * 0.4,
           },
-        ]}>
+        ]}
+      >
         {initials}
       </Text>
     </View>
@@ -90,21 +86,14 @@ export function DoctorCard({
     <TouchableOpacity
       activeOpacity={0.9}
       onPress={onPress}
-      style={styles.doctorCard}>
-      <Avatar
-        uri={doctor.photo}
-        size={56}
-        name={doctor.name}
-      />
+      style={styles.doctorCard}
+    >
+      <Avatar uri={doctor.photo} size={56} name={doctor.name} />
 
       <View style={styles.doctorInfo}>
-        <Text style={styles.doctorName}>
-          {doctor.name}
-        </Text>
+        <Text style={styles.doctorName}>{doctor.name}</Text>
 
-        <Text style={styles.doctorSpec}>
-          {doctor.specialty}
-        </Text>
+        <Text style={styles.doctorSpec}>{doctor.specialty}</Text>
 
         <View style={styles.doctorMeta}>
           <View style={styles.metaItem}>
@@ -114,20 +103,22 @@ export function DoctorCard({
               fill={Colors.warning[500]}
             />
 
-            <Text style={styles.metaText}>
-              {doctor.rating ?? 'Not rated'}
-            </Text>
+            <Text style={styles.metaText}>{doctor.rating ?? 'Not rated'}</Text>
           </View>
 
           <Text style={styles.dot}>•</Text>
 
           <Text style={styles.metaText}>
-            {doctor.experience === null ? 'Experience unavailable' : `${doctor.experience} yrs`}
+            {doctor.experience === null
+              ? 'Experience unavailable'
+              : `${doctor.experience} yrs`}
           </Text>
         </View>
 
         <Text style={styles.doctorFee}>
-          {doctor.consultationFee === null ? 'Fee unavailable' : `₹${doctor.consultationFee}`}
+          {doctor.consultationFee === null
+            ? 'Fee unavailable'
+            : `₹${doctor.consultationFee}`}
         </Text>
       </View>
     </TouchableOpacity>
@@ -145,29 +136,22 @@ export function AppointmentCard({
     <TouchableOpacity
       activeOpacity={0.9}
       onPress={onPress}
-      style={styles.apptCard}>
+      style={styles.apptCard}
+    >
       <View style={styles.apptLeft}>
-        <Text style={styles.apptTime}>
-          {appointment.time}
-        </Text>
+        <Text style={styles.apptTime}>{appointment.time}</Text>
 
-        <Text style={styles.apptDate}>
-          {appointment.date}
-        </Text>
+        <Text style={styles.apptDate}>{appointment.date}</Text>
       </View>
 
       <View style={styles.apptDivider} />
 
       <View style={styles.apptBody}>
-        <Text style={styles.apptDoctor}>
-          {appointment.doctorName}
-        </Text>
+        <Text style={styles.apptDoctor}>{appointment.doctorName}</Text>
 
-        <Text style={styles.apptDept}>
-          {appointment.department}
-        </Text>
+        <Text style={styles.apptDept}>{appointment.department}</Text>
 
-        <View style={styles.apptMetaRow}>
+        {/* <View style={styles.apptMetaRow}>
           {appointment.consultationType === 'video' ||
           appointment.consultationType === 'online' ? (
             <Video
@@ -184,7 +168,7 @@ export function AppointmentCard({
           <Text style={styles.apptMode}>
             {appointment.consultationType.toUpperCase()}
           </Text>
-        </View>
+        </View> */}
       </View>
 
       <StatusBadge status={appointment.status} />
@@ -192,24 +176,23 @@ export function AppointmentCard({
   );
 }
 
-export function StatusBadge({
-  status,
-}: {
-  status: string;
-}) {
+export function StatusBadge({ status }: { status: string }) {
   const config: Record<
     string,
     {
-      color:
-        | 'primary'
-        | 'success'
-        | 'warning'
-        | 'error'
-        | 'info'
-        | 'neutral';
+      color: 'primary' | 'success' | 'warning' | 'error' | 'info' | 'neutral';
       label: string;
     }
   > = {
+    active: {
+      color: 'primary',
+      label: 'Active',
+    },
+
+    canceled: {
+      color: 'error',
+      label: 'Cancelled',
+    },
     pending: {
       color: 'warning',
       label: 'Pending',
@@ -386,10 +369,7 @@ export function StatusBadge({
     },
   };
 
-  const {
-    color,
-    label,
-  } = config[status] || {
+  const { color, label } = config[status] || {
     color: 'neutral' as const,
     label: status,
   };
@@ -435,14 +415,16 @@ export function StatusBadge({
         {
           backgroundColor: colors.bg,
         },
-      ]}>
+      ]}
+    >
       <Text
         style={[
           styles.statusText,
           {
             color: colors.text,
           },
-        ]}>
+        ]}
+      >
         {label}
       </Text>
     </View>
@@ -475,27 +457,17 @@ export function VitalCard({
       style={[
         styles.vitalCard,
         {
-          backgroundColor:
-            colors[color] || Colors.primary[50],
+          backgroundColor: colors[color] || Colors.primary[50],
         },
-      ]}>
-      <View style={styles.vitalIcon}>
-        {icon}
-      </View>
+      ]}
+    >
+      <View style={styles.vitalIcon}>{icon}</View>
 
-      <Text style={styles.vitalLabel}>
-        {label}
-      </Text>
+      <Text style={styles.vitalLabel}>{label}</Text>
 
-      <Text style={styles.vitalValue}>
-        {value}
-      </Text>
+      <Text style={styles.vitalValue}>{value}</Text>
 
-      {unit && (
-        <Text style={styles.vitalUnit}>
-          {unit}
-        </Text>
-      )}
+      {unit && <Text style={styles.vitalUnit}>{unit}</Text>}
     </View>
   );
 }
@@ -516,29 +488,17 @@ export function TimelineItem({
   return (
     <View style={styles.timelineItem}>
       <View style={styles.timelineLeft}>
-        <View style={styles.timelineDot}>
-          {icon}
-        </View>
+        <View style={styles.timelineDot}>{icon}</View>
 
-        {!isLast && (
-          <View style={styles.timelineLine} />
-        )}
+        {!isLast && <View style={styles.timelineLine} />}
       </View>
 
       <View style={styles.timelineContent}>
-        <Text style={styles.timelineDate}>
-          {date}
-        </Text>
+        <Text style={styles.timelineDate}>{date}</Text>
 
-        <Text style={styles.timelineTitle}>
-          {title}
-        </Text>
+        <Text style={styles.timelineTitle}>{title}</Text>
 
-        {subtitle && (
-          <Text style={styles.timelineSubtitle}>
-            {subtitle}
-          </Text>
-        )}
+        {subtitle && <Text style={styles.timelineSubtitle}>{subtitle}</Text>}
       </View>
     </View>
   );
@@ -556,11 +516,19 @@ export function Stepper({
   const [contentWidth, setContentWidth] = useState(0);
 
   useEffect(() => {
-    if (!viewportWidth || !contentWidth) { return; }
+    if (!viewportWidth || !contentWidth) {
+      return;
+    }
     // Each step is 60 points wide with a 16-point connector.
     const activeCenter = current * 76 + 30;
     scrollRef.current?.scrollTo({
-      x: Math.max(0, Math.min(activeCenter - viewportWidth / 2, contentWidth - viewportWidth)),
+      x: Math.max(
+        0,
+        Math.min(
+          activeCenter - viewportWidth / 2,
+          contentWidth - viewportWidth,
+        ),
+      ),
       animated: true,
     });
   }, [current, viewportWidth, contentWidth]);
@@ -573,27 +541,24 @@ export function Stepper({
       contentContainerStyle={styles.stepper}
       showsHorizontalScrollIndicator
       onLayout={event => setViewportWidth(event.nativeEvent.layout.width)}
-      onContentSizeChange={width => setContentWidth(width)}>
+      onContentSizeChange={width => setContentWidth(width)}
+    >
       {steps.map((step, i) => (
         <React.Fragment key={i}>
           <View style={styles.step}>
             <View
               style={[
                 styles.stepCircle,
-                i <= current
-                  ? styles.stepActive
-                  : null,
-                i < current
-                  ? styles.stepDone
-                  : null,
-              ]}>
+                i <= current ? styles.stepActive : null,
+                i < current ? styles.stepDone : null,
+              ]}
+            >
               <Text
                 style={[
                   styles.stepText,
-                  i <= current
-                    ? styles.stepTextActive
-                    : null,
-                ]}>
+                  i <= current ? styles.stepTextActive : null,
+                ]}
+              >
                 {i < current ? '✓' : i + 1}
               </Text>
             </View>
@@ -601,10 +566,9 @@ export function Stepper({
             <Text
               style={[
                 styles.stepLabel,
-                i <= current
-                  ? styles.stepLabelActive
-                  : null,
-              ]}>
+                i <= current ? styles.stepLabelActive : null,
+              ]}
+            >
               {step}
             </Text>
           </View>
@@ -613,9 +577,7 @@ export function Stepper({
             <View
               style={[
                 styles.stepConnector,
-                i < current
-                  ? styles.stepConnectorActive
-                  : null,
+                i < current ? styles.stepConnectorActive : null,
               ]}
             />
           )}
