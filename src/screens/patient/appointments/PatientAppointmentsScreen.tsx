@@ -25,14 +25,10 @@ import { AppointmentCard } from '../../../components/ui/DataDisplay';
 
 import { CalendarX } from 'lucide-react-native';
 
-// import { useApp } from '../../../context/AppContext';
+import { useApp } from '../../../context/AppContext';
 import axios from 'axios';
 import { getMyAppointments } from '../../../network/api';
 
-// Adjust these paths to match your Redux files.
-import { useAppSelector } from '../../../store/hooks';
-import { selectPatient } from '../../../store/selectors';
-// import { selectPatient } from '../../../store/authSlice';
 
 type Appointment = React.ComponentProps<typeof AppointmentCard>['appointment'];
 
@@ -76,8 +72,7 @@ export default function PatientAppointmentsScreen() {
     'cancelled',
   ];
 
-  const patient = useAppSelector(selectPatient);
-  const patientId = patient?.patient_id;
+  const { currentPatientId: patientId } = useApp();
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +91,7 @@ export default function PatientAppointmentsScreen() {
       setAppointments([]);
       setError(null);
 
-      if (patientId == null) {
+      if (!patientId) {
         setLoading(false);
         setError('Patient information is unavailable');
         return;
