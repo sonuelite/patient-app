@@ -19,6 +19,7 @@ import AddPatient from '../screens/patient/profile/familyMembers/AddPatient';
 import PharmacyScreen from '../screens/quickActions/pharmacy/Pharmacy';
 import EmergencyScreen from '../screens/quickActions/emergency/Emergency';
 import BillingScreen from '../screens/quickActions/billing/Billing';
+import ResetPassword from '../screens/auth/resetPassword/ResetPassword';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -62,6 +63,7 @@ const StackNavigator = () => {
           <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
           <Stack.Screen name="Signup" component={Signup} />
           <Stack.Screen name="Otp" component={Otp} />
+          <Stack.Screen name="ResetPassword" component={ResetPassword} />
         </>
       )}
     </Stack.Navigator>

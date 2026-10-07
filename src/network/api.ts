@@ -581,3 +581,39 @@ export const forgotPatientPassword = async (
 
   return response.data;
 };
+
+export interface ResetPatientPasswordData {
+  email: string;
+  otp: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ResetPatientPasswordResponse {
+  success?: boolean;
+  message?: string;
+}
+
+export const resetPatientPassword = async (
+  data: ResetPatientPasswordData,
+): Promise<ResetPatientPasswordResponse> => {
+  const response =
+    await publicClient.post<ResetPatientPasswordResponse>(
+      '/api/v1/patient/resetPassword',
+      data,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
+      },
+    );
+
+  if (response.data?.success === false) {
+    throw new Error(
+      response.data.message || 'Unable to reset password',
+    );
+  }
+
+  return response.data;
+};

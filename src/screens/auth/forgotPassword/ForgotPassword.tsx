@@ -26,6 +26,9 @@ import { scale } from '../../../utils/scale';
 import { showToast } from '../../../utils/toast';
 import axios from 'axios';
 import {forgotPatientPassword} from '../../../network/api';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RootStackParamList} from '../../../types';
 
 export default function ForgotPassword() {
   const insets = useSafeAreaInsets();
@@ -33,6 +36,9 @@ export default function ForgotPassword() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const submitting = useRef(false);
+
+    const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
 //   const handleSubmit = () => {
 //     const normalizedEmail = email.trim();
@@ -84,6 +90,10 @@ const handleSubmit = async () => {
       result.message || 'OTP request submitted. Please check your email.',
       'success',
     );
+    if(result.success){
+      // Navigate to ResetPassword screen with email as a parameter
+      navigation.navigate('ResetPassword', { email: normalizedEmail });
+    }
   } catch (err: unknown) {
     const message = axios.isAxiosError(err)
       ? err.response?.data?.message || err.message
