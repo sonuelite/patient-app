@@ -553,3 +553,31 @@ export const getMyAppointments = async (
 
   return result.data;
 };
+
+export interface ForgotPasswordResponse {
+  success?: boolean;
+  message?: string;
+}
+
+export const forgotPatientPassword = async (
+  email: string,
+): Promise<ForgotPasswordResponse> => {
+  const response = await publicClient.post<ForgotPasswordResponse>(
+    '/api/v1/patient/forgotPassword',
+    {email},
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 30000,
+    },
+  );
+
+  if (response.data?.success === false) {
+    throw new Error(
+      response.data.message || 'Unable to send OTP',
+    );
+  }
+
+  return response.data;
+};

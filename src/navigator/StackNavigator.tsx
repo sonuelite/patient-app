@@ -8,6 +8,7 @@ import type { RootStackParamList } from '../types';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Signup from '../screens/auth/signup/Signup';
 import LoginScreen from '../screens/auth/signIn/LoginScreen';
+import ForgotPassword from '../screens/auth/forgotPassword/ForgotPassword';
 import Otp from '../screens/auth/otp/Otp';
 import BottomTabNavigator from './BottomTabNavigator';
 import FamilyMembersScreen from '../screens/patient/profile/familyMembers/FamilyMembers';
@@ -58,6 +59,7 @@ const StackNavigator = () => {
       ) : (
         <>
           <Stack.Screen name="LoginScreen" component={LoginScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
           <Stack.Screen name="Signup" component={Signup} />
           <Stack.Screen name="Otp" component={Otp} />
         </>

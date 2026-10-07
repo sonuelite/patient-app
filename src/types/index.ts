@@ -13,6 +13,7 @@ export type RootStackParamList = {
 
     Welcome: undefined;
     LoginScreen: undefined;
+    ForgotPassword: undefined;
     Signup: undefined;
     // Otp: undefined;
       Otp: {

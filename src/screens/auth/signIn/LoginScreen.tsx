@@ -272,7 +272,7 @@ const handleSendOtp = async () => {
           />
         )}
         <TouchableOpacity
-          onPress={() => showToast('Password reset link sent (demo)', 'info')}
+          onPress={() => navigation.navigate('ForgotPassword')}
         >
           <Text style={styles.forgotText}>Forgot Password?</Text>
         </TouchableOpacity>
