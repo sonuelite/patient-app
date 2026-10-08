@@ -53,6 +53,7 @@ import { ColorConstants } from '../../../constants/colorConstants';
 import { Fontconstants } from '../../../constants/fontConstants';
 import { scale } from '../../../utils/scale';
 import Calendar from '../../../components/calendar/Calendar';
+import moment from 'moment';
 
 type BookAppointmentNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -248,6 +249,38 @@ export default function BookAppointmentScreen() {
   const selectedDoctor = doctors.find(doctor => doctor.id === selectedDoctorId);
   console.log('selectedDoctor->', selectedDoctor);
 
+  const doctorTimeSlots = selectedDoctor?.timeSlots ?? [];
+  const selectedTimeSlot = doctorTimeSlots.find(
+    slot => slot.start === time,
+  );
+
+  const isDoctorAvailableOnDate = (value: string) => {
+  const selectedDate = moment(value, 'YYYY-MM-DD', true);
+  const today = moment().startOf('day');
+
+  if (
+    !selectedDate.isValid() ||
+    selectedDate.isBefore(today, 'day') ||
+    !selectedDate.isSame(today, 'month')
+  ) {
+    return false;
+  }
+
+  const weekday = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ][selectedDate.day()];
+
+  return (selectedDoctor?.availableDays ?? []).some(
+    day => day.trim().toLowerCase() === weekday.toLowerCase(),
+  );
+};
+
   const selectedPatient = patients.find(patient => patient.id === patientId);
 
   // const days = useMemo(
@@ -326,16 +359,32 @@ export default function BookAppointmentScreen() {
     //   return;
     // }
     // Step 4 (Time) is hidden. Step 5 is Patient.
+    // if (step === 3) {
+    //   // setStep(5);
+    //   setStep(4);
+    //   return;
+    // }
     if (step === 3) {
-      // setStep(5);
+      if (!isDoctorAvailableOnDate(date)) {
+        showToast(
+          'Please select an available appointment date',
+          'error',
+        );
+        return;
+      }
+
       setStep(4);
       return;
     }
 
-    if (step === 4 && !time) {
-      showToast('Please select a time slot', 'error');
-      return;
-    }
+    // if (step === 4 && !time) {
+    //   showToast('Please select a time slot', 'error');
+    //   return;
+    // }
+    if (step === 4 && !selectedTimeSlot) {
+  showToast('Please select a valid time slot', 'error');
+  return;
+}
 
     if (step === 5 && (loadingPatients || patientsError || !selectedPatient)) {
       showToast('Please select a patient', 'error');
@@ -363,6 +412,17 @@ export default function BookAppointmentScreen() {
     // }
     if (!selectedDoctor) {
       showToast('Please select a doctor', 'error');
+      return;
+    }
+    if (!selectedTimeSlot) {
+      showToast('Please select an appointment time slot', 'error');
+      return;
+    }
+    if (!isDoctorAvailableOnDate(date)) {
+      showToast(
+        'Please select an available appointment date',
+        'error',
+      );
       return;
     }
 
@@ -432,7 +492,8 @@ export default function BookAppointmentScreen() {
         department: departmentId,
         doctor: { employee_id: employeeId },
         appointmentDate: date,
-        appointmentTime,
+        slot_id: selectedTimeSlot.id,
+        // appointmentTime,
         appointmentType:
           consultationType === 'follow-up' ? 'Follow-up' : 'New Consultation',
         // bookingFor: selectedPatient.relation.trim().toLowerCase(),
@@ -754,7 +815,7 @@ export default function BookAppointmentScreen() {
         {step === 3 ? (
           <View>
             <Text style={styles.stepTitle}>Select Date</Text>
-            <Calendar
+            {/* <Calendar
               selected={date}
               onSelectDate={selectedDate => {
                 setDate(selectedDate);
@@ -762,13 +823,22 @@ export default function BookAppointmentScreen() {
                 setStep(4);
                 // setStep(5);
               }}
+            /> */}
+            <Calendar
+              selected={date}
+              availableDays={selectedDoctor?.availableDays ?? []}
+              onSelectDate={selectedDate => {
+                setDate(selectedDate);
+                setTime(null);
+                setStep(4);
+              }}
             />
           </View>
         ) : null}
 
         {/* Time */}
 
-        {step === 4 ? (
+        {/* {step === 4 ? (
           <View>
             <Text style={styles.stepTitle}>
               Select Time Slot
@@ -800,7 +870,47 @@ export default function BookAppointmentScreen() {
               ))}
             </View>
           </View>
-        ) : null}
+        ) : null} */}
+
+        {step === 4 ? (
+  <View>
+    <Text style={styles.stepTitle}>Select Time Slot</Text>
+
+    {doctorTimeSlots.length === 0 ? (
+        <Text style={styles.emptyText}>
+          No time slots available for this doctor.
+        </Text>
+        ) : (
+          <View style={styles.slotsGrid}>
+            {doctorTimeSlots.map(slot => {
+              const isSelected = time === slot.start;
+
+              return (
+                <TouchableOpacity
+                  key={slot.id}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setTime(slot.start);
+                    setStep(5);
+                  }}
+                  style={[
+                    styles.slot,
+                    isSelected && styles.slotSelected,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.slotText,
+                      isSelected && styles.slotTextSelected,
+                    ]}>
+                    {slot.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    ) : null}
 
         {/* Patient */}
 

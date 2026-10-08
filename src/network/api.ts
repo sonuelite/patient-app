@@ -216,7 +216,8 @@ export interface BookAppointmentData {
   department: number;
   doctor: {employee_id: number};
   appointmentDate: string;
-  appointmentTime: string;
+  // appointmentTime: string;
+  slot_id: number;
   appointmentType: string;
   bookingFor: string;
   bookingSource: 'App';
@@ -253,6 +254,12 @@ export async function bookAppointment(data: BookAppointmentData): Promise<Booked
   return response.data.data;
 }
 
+export interface DoctorTimeSlot {
+  id: number;
+  start: string;
+  end: string;
+  label: string;
+}
 export interface PatientDoctor {
   about?: string | null;
   available_days?: string[] | null;
@@ -262,7 +269,8 @@ export interface PatientDoctor {
   entity_name?: string | null;
   languages?: string[] | null;
   qualification?: string | null;
-  time_slots?: Record<string, unknown>[] | null;
+  // time_slots?: Record<string, unknown>[] | null;
+  time_slots?: DoctorTimeSlot[] | null;
   full_name: string;
   employee_official_email: string | null;
   employee_code: string;

@@ -1,5 +1,6 @@
 import type {NavigatorScreenParams} from '@react-navigation/native';
 import type {PatientDetails} from './patientDetails';
+import { DoctorTimeSlot } from '../network/api';
 export type BottomTabParamList = {
   index: undefined;
   appointments: undefined;
@@ -196,7 +197,8 @@ consultationFee: number | null;
 languages: string[];
 about: string;
 availableDays: string[];
-timeSlots?: Record<string, unknown>[];
+// timeSlots?: Record<string, unknown>[];
+timeSlots?: DoctorTimeSlot[];
 rating: number | null;
 reviews: Review[];
 photo: string;
