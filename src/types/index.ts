@@ -196,6 +196,7 @@ consultationFee: number | null;
 languages: string[];
 about: string;
 availableDays: string[];
+timeSlots?: Record<string, unknown>[];
 rating: number | null;
 reviews: Review[];
 photo: string;

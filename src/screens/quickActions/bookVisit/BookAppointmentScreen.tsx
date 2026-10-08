@@ -246,6 +246,7 @@ export default function BookAppointmentScreen() {
   const successAnimation = useRef(new Animated.Value(0)).current;
 
   const selectedDoctor = doctors.find(doctor => doctor.id === selectedDoctorId);
+  console.log('selectedDoctor->', selectedDoctor);
 
   const selectedPatient = patients.find(patient => patient.id === patientId);
 

@@ -254,6 +254,15 @@ export async function bookAppointment(data: BookAppointmentData): Promise<Booked
 }
 
 export interface PatientDoctor {
+  about?: string | null;
+  available_days?: string[] | null;
+  employee_photo?: string | null;
+  experience?: number | string | null;
+  hospital_name?: string | null;
+  entity_name?: string | null;
+  languages?: string[] | null;
+  qualification?: string | null;
+  time_slots?: Record<string, unknown>[] | null;
   full_name: string;
   employee_official_email: string | null;
   employee_code: string;

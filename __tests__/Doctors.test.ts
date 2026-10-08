@@ -16,6 +16,42 @@ const doctor: PatientDoctor = {
 
 beforeEach(() => jest.clearAllMocks());
 
+test('preserves API profile details when doctors are mapped for Redux', () => {
+  const timeSlots = [{start_time: '09:00', end_time: '12:00'}];
+  expect(mapPatientDoctor({
+    ...doctor,
+    hospital_name: 'Apollo Hospital',
+    available_days: ['Monday', 'Wednesday', 'Friday'],
+    about: 'Neurology consultant',
+    experience: '12',
+    languages: ['English', 'Hindi'],
+    employee_photo: 'https://example.com/doctor.png',
+    time_slots: timeSlots,
+    dept_id: null,
+    department_id: 26,
+  })).toMatchObject({
+    hospital: 'Apollo Hospital',
+    availableDays: ['Monday', 'Wednesday', 'Friday'],
+    about: 'Neurology consultant',
+    experience: 12,
+    languages: ['English', 'Hindi'],
+    photo: 'https://example.com/doctor.png',
+    timeSlots,
+    departmentId: 26,
+  });
+});
+
+test('uses safe defaults for null profile details and falls back to entity name', () => {
+  expect(mapPatientDoctor({
+    ...doctor, hospital_name: null, entity_name: 'Apollo Hospital',
+    available_days: null, about: null, experience: null,
+    languages: null, employee_photo: null, time_slots: null,
+  })).toMatchObject({
+    hospital: 'Apollo Hospital', availableDays: [], about: '',
+    experience: null, languages: [], photo: '', timeSlots: [],
+  });
+});
+
 test('loads doctors with the selected entity and cancellation signal', async () => {
   jest.mocked(apiClient.get).mockResolvedValue({data: {success: true, data: [doctor]}});
   const controller = new AbortController();

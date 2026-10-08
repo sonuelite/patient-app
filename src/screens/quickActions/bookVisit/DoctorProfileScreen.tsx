@@ -64,6 +64,7 @@ export default function DoctorProfileScreen() {
 
   const {doctorId} = route.params;
   const doctors = useAppSelector(selectDoctors);
+  console.log('doctors-->:', doctors);
 
   const [selectedSlot, setSelectedSlot] =
     useState<string | null>(null);
