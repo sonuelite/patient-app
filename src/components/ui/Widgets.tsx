@@ -4,6 +4,8 @@ import {
   View,
   Text,
   TouchableOpacity,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 
 import {
@@ -18,6 +20,7 @@ import {
 import { scale } from '../../utils/scale';
 
 interface StatTileProps {
+  style?: StyleProp<ViewStyle>;
   label: string;
   value: string | number;
   icon: React.ReactNode;
@@ -39,6 +42,7 @@ interface StatTileProps {
 }
 
 export function StatTile({
+  style,
   label,
   value,
   icon,
@@ -101,6 +105,7 @@ export function StatTile({
         styles.tile,
         size === 'lg' && styles.tileLg,
         !onPress && Shadows.md,
+        style,
       ]}
     >
       <View style={styles.topRow}>

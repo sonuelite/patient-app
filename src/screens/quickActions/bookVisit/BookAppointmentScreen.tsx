@@ -83,8 +83,9 @@ const CONSULTATION_TYPES: ConsultationType[] = [
   'follow-up',
   'online',
   'video',
-  'audio',
-  'physical',
+  // 'audio',
+  // 'physical',
+  'walkin'
 ];
 
 const QUICK_REASONS = [
@@ -112,8 +113,11 @@ const getConsultationDescription = (type: ConsultationType) => {
     case 'audio':
       return 'Audio call consultation';
 
-    case 'physical':
-      return 'Physical examination';
+    // case 'physical':
+    //   return 'Physical examination';
+
+    case 'walkin':
+      return 'Walk-in consultation';
 
     default:
       return '';

@@ -430,6 +430,11 @@ export default function PatientHomeScreen() {
         <View style={styles.body}>
 
           {/* Health Snapshot */}
+          <SectionHeader
+            title="Health Snapshot"
+            action="View all"
+            onAction={() => goTo('VitalsScreen', {patientId: dashboardPatientId})}
+          />
           <View style={styles.healthBar}>
             <StatTile
               label="Blood Pressure"
@@ -452,7 +457,7 @@ export default function PatientHomeScreen() {
               //     ? `${latestVital.spo2}%`
               //     : '--'
               // }
-                value={latestVital ? `${latestVital.spo2}%` : '--'}
+                value={latestVital?.spo2 != null ? `${latestVital.spo2}%` : '--'}
               icon={
                 <Wind
                   size={18}
@@ -470,7 +475,7 @@ export default function PatientHomeScreen() {
               //     ? `${latestVital.bloodSugar}`
               //     : '--'
               // }
-                  value={latestVital ? `${latestVital.bloodSugar}` : '--'}
+                  value={latestVital?.bloodSugar != null ? `${latestVital.bloodSugar}` : '--'}
               icon={
                 <Droplet
                   size={18}

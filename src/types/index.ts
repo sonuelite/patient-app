@@ -49,6 +49,7 @@ export type RootStackParamList = {
     PharmacyScreen: undefined;
     EmergencyScreen: undefined;
     BillingScreen: undefined;
+    VitalsScreen: {patientId: string};
 };
 
 export type UserRole = 'patient' | 'doctor' | 'admin';
@@ -68,7 +69,8 @@ export type ConsultationType =
 | 'online'
 | 'video'
 | 'audio'
-| 'physical';
+// | 'physical';
+| 'walkin';
 
 export type LabStatus =
 | 'ordered'
@@ -292,6 +294,13 @@ reportUrl?: string;
 }
 
 export interface Vital {
+// Optional fields supplied by the vitals API.
+systolicBp?: number | null;
+diastolicBp?: number | null;
+map?: number | null;
+oxygenTherapy?: string | null;
+temperatureUnit?: '°C' | '°F';
+bmiClass?: string | null;
 id: string;
 patientId: string;
 date: string;
