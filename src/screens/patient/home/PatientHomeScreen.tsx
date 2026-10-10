@@ -67,10 +67,12 @@ import { useAppSelector } from '../../../store/hooks';
 import {selectPatient, selectPatientId, selectAccessToken} from '../../../store/selectors';
 import {getAllRelatedPatients, type RelatedPatient} from '../../../network/api';
 import {getErrorMessage} from '../../../utils/apiError';
+import FlashCard from '../../../components/flashcard/FlashCard';
 
 export default function PatientHomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const [showAlert, setShowAlert] = useState(true);
 
   const authPatient = useAppSelector(selectPatient);
 
@@ -426,7 +428,14 @@ export default function PatientHomeScreen() {
             </View>
           )}
         </View>
-
+      {showAlert && (
+        <FlashCard
+          type="critical"
+          title="Critical Alert"
+          message="Patient has a severe penicillin allergy."
+          onClose={() => setShowAlert(false)}
+        />
+      )}
         <View style={styles.body}>
 
           {/* Health Snapshot */}
