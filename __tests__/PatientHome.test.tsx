@@ -2,9 +2,9 @@ import React from 'react';
 import {Text, TouchableOpacity} from 'react-native';
 import {act, create, ReactTestRenderer} from 'react-test-renderer';
 import PatientHomeScreen from '../src/screens/patient/home/PatientHomeScreen';
-import {getAllRelatedPatients} from '../src/network/api';
+import {getAllRelatedPatients, getPatientVitals} from '../src/network/api';
 
-jest.mock('../src/network/api', () => ({getAllRelatedPatients: jest.fn()}));
+jest.mock('../src/network/api', () => ({getAllRelatedPatients: jest.fn(), getPatientVitals: jest.fn()}));
 jest.mock('../src/store/hooks', () => ({
   useAppSelector: (selector: Function) => selector({auth: {
     patient: {patient_id: 1, first_name: 'Primary', last_name: 'Patient', uhid: 'SELF', photo: null},
@@ -29,6 +29,12 @@ jest.mock('../src/context/AppContext', () => ({
 }));
 
 let root: ReactTestRenderer;
+beforeEach(() => {
+  jest.mocked(getPatientVitals).mockImplementation(async patientId => ({
+    id: 7, patient_id: Number(patientId), systolic: Number(patientId) === 1 ? 120 : 110,
+    diastolic: 80, map: 93,
+  }));
+});
 afterEach(async () => { if (root) { await act(async () => root.unmount()); } });
 const screenText = () => root.root.findAllByType(Text).map(node => node.props.children).flat().join('');
 
@@ -41,11 +47,17 @@ test('selecting a family member updates the header and never uses another patien
   await act(async () => { root = create(<PatientHomeScreen />); });
   expect(getAllRelatedPatients).toHaveBeenCalledWith(1, expect.any(AbortSignal));
   expect(screenText()).toContain('Primary Patient');
+  expect(getPatientVitals).toHaveBeenCalledWith('1', expect.any(AbortSignal));
+  expect(screenText()).toContain('120');
+  expect(screenText()).toContain('80');
+  expect(screenText()).toContain('93');
   const toggle = () => root.root.findAllByType(TouchableOpacity).find(node => node.props.accessibilityLabel?.startsWith('Select patient'))!;
   act(() => toggle().props.onPress());
   const options = root.root.findAllByType(TouchableOpacity).filter(node => node.props.accessibilityState?.selected !== undefined);
   expect(options).toHaveLength(2);
-  act(() => options[1].props.onPress());
+  await act(async () => options[1].props.onPress());
+  expect(getPatientVitals).toHaveBeenCalledWith('2', expect.any(AbortSignal));
+  expect(screenText()).toContain('110');
   expect(screenText()).toContain('Child Patient');
   expect(screenText()).toContain('CHILD');
   expect(screenText()).not.toContain('999/999');

@@ -5,6 +5,49 @@ export {apiClient} from './client';
 import {normalizePatientStates, PatientStateOption} from '../utils/patientStateOptions';
 import axios from 'axios';
 
+export interface PatientVitals {
+  id: number;
+  patient_id: number;
+  systolic?: number | null;
+  diastolic?: number | null;
+  map?: number | null;
+  pulse?: number | null;
+  temperature?: number | null;
+  temperature_unit?: string | null;
+  spo2?: number | null;
+  respiratoryRate?: number | null;
+  height?: number | null;
+  weight?: number | null;
+  bmi?: number | null;
+  bmi_class?: string | null;
+  o2_therapy?: string | null;
+  vitals_updated_at?: string | null;
+  is_deleted?: boolean;
+}
+
+export async function getPatientVitals(
+  patientId: string | number,
+  signal?: AbortSignal,
+): Promise<PatientVitals | null> {
+  const response = await apiClient.get<{
+    success: boolean; message?: string; data: PatientVitals | null;
+  }>('/api/v1/patient/getpatientvitals', {
+    params: {patient_id: patientId},
+    headers: {'x-entity-id': '1'},
+    signal,
+  });
+  if (response.data.success !== true) {
+    throw new Error(response.data.message || 'Unable to load patient vitals');
+  }
+  const vital = response.data.data;
+  if (vital == null) { return null; }
+  if (typeof vital !== 'object' || Array.isArray(vital) ||
+      String(vital.patient_id) !== String(patientId)) {
+    throw new Error('Invalid patient vitals response');
+  }
+  return vital.is_deleted ? null : vital;
+}
+
 export async function getStatesByCountryId(
   countryId: string | number, signal?: AbortSignal,
 ): Promise<PatientStateOption[]> {

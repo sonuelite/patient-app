@@ -68,6 +68,7 @@ import {selectPatient, selectPatientId, selectAccessToken} from '../../../store/
 import {getAllRelatedPatients, type RelatedPatient} from '../../../network/api';
 import {getErrorMessage} from '../../../utils/apiError';
 import FlashCard from '../../../components/flashcard/FlashCard';
+import {usePatientVitals} from '../../../hooks/usePatientVitals';
 
 export default function PatientHomeScreen() {
   const insets = useSafeAreaInsets();
@@ -178,7 +179,7 @@ export default function PatientHomeScreen() {
     n => n.patientId === dashboardPatientId && !n.read,
   ).length;
 
-  const latestVital = patient?.vitals[0];
+  const {vital: latestVital, loading: loadingVitals, error: vitalsError, retry: retryVitals} = usePatientVitals(dashboardPatientId);
 
   const activeMeds = medicationReminders.filter(
     m => m.patientId === dashboardPatientId && m.active,
@@ -444,11 +445,22 @@ export default function PatientHomeScreen() {
             action="View all"
             onAction={() => goTo('VitalsScreen', {patientId: dashboardPatientId})}
           />
+          {loadingVitals && <ActivityIndicator color={Colors.primary[600]} />}
+          {vitalsError && (
+            <View>
+              <Text style={styles.selectorError}>{vitalsError}</Text>
+              <TouchableOpacity onPress={retryVitals} accessibilityRole="button">
+                <Text style={styles.retryText}>Retry vitals</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {!loadingVitals && !vitalsError && !latestVital && (
+            <Text style={styles.profileMeta}>No vitals recorded for this patient yet.</Text>
+          )}
           <View style={styles.healthBar}>
             <StatTile
-              label="Blood Pressure"
-              // value={latestVital ? latestVital.bp : '--'}
-              value={latestVital?.bp || '--'}
+              label="Systolic BP"
+              value={latestVital?.systolic != null ? String(latestVital.systolic) : '--'}
               icon={
                 <Heart
                   size={18}
@@ -460,13 +472,8 @@ export default function PatientHomeScreen() {
             />
 
             <StatTile
-              label="SpO2"
-              // value={
-              //   latestVital
-              //     ? `${latestVital.spo2}%`
-              //     : '--'
-              // }
-                value={latestVital?.spo2 != null ? `${latestVital.spo2}%` : '--'}
+              label="Diastolic BP"
+              value={latestVital?.diastolic != null ? String(latestVital.diastolic) : '--'}
               icon={
                 <Wind
                   size={18}
@@ -478,13 +485,8 @@ export default function PatientHomeScreen() {
             />
 
             <StatTile
-              label="Blood Sugar"
-              // value={
-              //   latestVital
-              //     ? `${latestVital.bloodSugar}`
-              //     : '--'
-              // }
-                  value={latestVital?.bloodSugar != null ? `${latestVital.bloodSugar}` : '--'}
+              label="Computed MAP"
+              value={latestVital?.map != null ? String(latestVital.map) : '--'}
               icon={
                 <Droplet
                   size={18}
