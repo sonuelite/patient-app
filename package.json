@@ -22,6 +22,8 @@
     "moment": "^2.31.0",
     "react": "19.2.3",
     "react-native": "0.87.1",
+    "react-native-blob-util": "^0.25.1",
+    "react-native-pdf": "^7.0.5",
     "react-native-safe-area-context": "^5.10.0",
     "react-native-screens": "^4.28.0",
     "react-native-svg": "^15.15.5",

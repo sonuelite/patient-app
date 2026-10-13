@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
+import Pdf from 'react-native-pdf';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
@@ -45,6 +48,7 @@ import { useApp } from '../../../context/AppContext';
 import { getPatientLabTests } from '../../../network/api';
 import type { PatientLabTest } from '../../../network/api';
 import { getErrorMessage } from '../../../utils/apiError';
+import { downloadLabReport } from '../../../utils/downloadLabReport';
 
 const TABS = [
   'Consultations',
@@ -100,6 +104,56 @@ export default function PatientRecordsScreen() {
   const [labsLoading, setLabsLoading] = useState(true);
   const [labsError, setLabsError] = useState<string | null>(null);
   const [labsRetry, setLabsRetry] = useState(0);
+  const [downloadingLab, setDownloadingLab] = useState<string | null>(null);
+  const downloadInProgress = useRef(false);
+  const [report, setReport] = useState<{path: string; title: string; patientId: string} | null>(null);
+  const [viewerError, setViewerError] = useState<string | null>(null);
+  const [pageInfo, setPageInfo] = useState('');
+  const activePatientId = useRef(currentPatientId);
+  activePatientId.current = currentPatientId;
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (report) {
+        ReactNativeBlobUtil.fs.unlink(report.path).catch(() => undefined);
+      }
+    };
+  }, [report]);
+
+  useEffect(() => {
+    setReport(null);
+  }, [currentPatientId]);
+
+  const closeReport = () => setReport(null);
+
+  const handleDownloadLab = async (lab: PatientLabTest) => {
+    if (downloadInProgress.current) {
+      return;
+    }
+    downloadInProgress.current = true;
+    setDownloadingLab(`${lab.type}-${lab.reference_id}-${lab.laboratory_id}`);
+    try {
+      const result = await downloadLabReport(lab);
+      if (!mounted.current || activePatientId.current !== currentPatientId) {
+        await ReactNativeBlobUtil.fs.unlink(result.path).catch(() => undefined);
+        return;
+      }
+      setViewerError(null);
+      setPageInfo('');
+      setReport({path: result.path, title: lab.test_name, patientId: currentPatientId});
+    } catch (error) {
+      showToast(getErrorMessage(error, 'Unable to download lab report'), 'error');
+    } finally {
+      downloadInProgress.current = false;
+      setDownloadingLab(null);
+    }
+  };
 
   useFocusEffect(useCallback(() => {
     if (tab !== 'Lab Reports') {
@@ -135,6 +189,8 @@ export default function PatientRecordsScreen() {
       active = false;
       controller.abort();
     };
+  // Changing the retry counter deliberately restarts the focused request.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPatientId, tab, labsRetry]));
 
   const patient = patients.find(
@@ -404,6 +460,28 @@ export default function PatientRecordsScreen() {
                     ? 'Report available'
                     : 'Report not ready'}
                 </Text>
+                {lab.can_download && (
+                  <TouchableOpacity
+                    style={styles.downloadBtn}
+                    onPress={() => handleDownloadLab(lab)}
+                    disabled={downloadingLab !== null}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Download report for ${lab.test_name}`}
+                    accessibilityState={{disabled: downloadingLab !== null}}
+                  >
+                    {downloadingLab === `${lab.type}-${lab.reference_id}-${lab.laboratory_id}` ? (
+                      <>
+                        <ActivityIndicator size="small" color={Colors.primary[600]} />
+                        <Text style={styles.downloadBtnText}>Downloading...</Text>
+                      </>
+                    ) : (
+                      <>
+                        <FileCheck size={16} color={Colors.primary[600]} />
+                        <Text style={styles.downloadBtnText}>Download Report</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
               </Card>
             ))
           ) : (
@@ -697,11 +775,59 @@ export default function PatientRecordsScreen() {
             />
           ))}
       </ScrollView>
+      <Modal
+        visible={report !== null && report.patientId === currentPatientId}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={closeReport}
+      >
+        <View style={[styles.container, {paddingTop: insets.top, paddingBottom: insets.bottom}]}>
+          <View style={styles.viewerHeader}>
+            <View style={styles.recordInfo}>
+              <Text style={styles.recordTitle} numberOfLines={2}>{report?.title}</Text>
+              {!!pageInfo && <Text style={styles.recordDesc}>{pageInfo}</Text>}
+            </View>
+            <TouchableOpacity onPress={closeReport} accessibilityRole="button" style={styles.closeViewer}>
+              <Text style={styles.downloadBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+          {viewerError ? (
+            <EmptyState
+              icon={<FileText size={48} color={Colors.neutral[300]} />}
+              title="Unable to display report"
+              message={viewerError}
+            />
+          ) : report && (
+            <Pdf
+              source={{uri: `file://${report.path}`}}
+              style={styles.pdf}
+              trustAllCerts={false}
+              onLoadComplete={pages => setPageInfo(`Page 1 of ${pages}`)}
+              onPageChanged={(page, pages) => setPageInfo(`Page ${page} of ${pages}`)}
+              onError={() => setViewerError('The report was downloaded but could not be displayed. Close and try again.')}
+            />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  viewerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.base,
+    backgroundColor: Colors.neutral[0],
+    gap: Spacing.md,
+  },
+  closeViewer: {
+    padding: Spacing.sm,
+  },
+  pdf: {
+    flex: 1,
+    width: '100%',
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.neutral[50],
