@@ -42,6 +42,8 @@ function birthDate(value: unknown): string {
 
 export function mapPatientForm(patient: PatientDetails = {}) {
   const panel = patient.panel_required;
+  const emergency = patient.emergencyContacts?.find(contact => contact.is_primary)
+    || patient.emergencyContacts?.[0];
   return {
     title: option(patient.title, ['Mr', 'Ms', 'Mrs']),
     firstName: patientText(patient.first_name),
@@ -49,8 +51,8 @@ export function mapPatientForm(patient: PatientDetails = {}) {
     dob: birthDate(patient.date_of_birth),
     gender: option(patient.gender, ['Male', 'Female', 'Other']),
     mobile: patientText(patient.mobile) || patientText(patient.phone),
-    phone: patientText(patient.phone),
-    email: patientText(patient.email),
+    phone: patientText(emergency?.phone),
+    email: patientText(emergency?.email),
     address: patientText(patient.address),
     country: patientText(patient.country_name) || patientText(patient.country),
     countryId: patientText(patient.country_id),

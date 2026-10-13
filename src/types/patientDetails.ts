@@ -1,6 +1,8 @@
 type PatientValue = string | number | null;
 
 export interface PatientDetails {
+  id?: number;
+  emergencyContacts?: {phone?: PatientValue; email?: string | null; is_primary?: boolean}[];
   patient_id?: number;
   title?: string | null;
   first_name?: string | null;

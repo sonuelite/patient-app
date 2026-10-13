@@ -420,6 +420,7 @@ export async function getAllRelatedPatients(
 // }
 
 export async function addFamilyMember(formData: FormData) {
+  // Includes emergencyContacts as a JSON array supplied by AddPatient.
   const response = await apiClient.post(
     '/api/v1/patient/addFamilyMember',
     formData,

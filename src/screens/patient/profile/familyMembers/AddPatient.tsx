@@ -288,8 +288,8 @@ const AddPatient = ({
 
   // Use the actual parent ID supplied to this screen.
   // const parentPatientId = route.params.patientDetails?.id;
-  const patientId = route.params.patientDetails?.id;
-  const parentPatientId = route.params.patientDetails?.id;
+  const patientId = route.params.patientDetails?.patient_id ?? route.params.patientDetails?.id;
+  const parentPatientId = patientId;
 
   // if (!parentPatientId) {
   //   showToast('Parent patient ID is missing', 'error');
@@ -326,8 +326,15 @@ if (patientType === 'Family Member' && !relationOf.trim()) {
   data.append('lastName', form.lastName.trim());
   data.append('dob', form.dob);
   data.append('gender', form.gender);
-  data.append('phone', form.phone);
-  data.append('email', form.email.trim());
+  data.append('phone', form.mobile.trim());
+  if (patientType === 'Self' && route.params.patientDetails.email != null) {
+    data.append('email', route.params.patientDetails.email.trim());
+  }
+  data.append('emergencyContacts', JSON.stringify(
+    form.phone.trim() || form.email.trim()
+      ? [{phone: form.phone.trim(), email: form.email.trim(), is_primary: true}]
+      : [],
+  ));
   data.append('address', form.address);
   data.append('countryId', String(form.countryId));
   data.append('stateId', String(form.stateId));
@@ -616,9 +623,9 @@ if (patientType === 'Family Member' && !relationOf.trim()) {
             keyboardType="numeric"
           />
         </Card>
-        {/* Contact Details */}
+        {/* Emergency contact */}
 
-        <Text style={styles.sectionTitle}>Contact Details</Text>
+        <Text style={styles.sectionTitle}>Emergency contact</Text>
 
         <Card style={styles.formCard}>
           {/* <Input
