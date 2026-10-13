@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import {
   Colors,
@@ -41,6 +42,9 @@ import {
 } from 'lucide-react-native';
 
 import { useApp } from '../../../context/AppContext';
+import { getPatientLabTests } from '../../../network/api';
+import type { PatientLabTest } from '../../../network/api';
+import { getErrorMessage } from '../../../utils/apiError';
 
 const TABS = [
   'Consultations',
@@ -84,7 +88,6 @@ export default function PatientRecordsScreen() {
     currentPatientId,
     appointments,
     prescriptions,
-    labOrders,
     radiologyOrders,
     documents,
     patients,
@@ -93,6 +96,46 @@ export default function PatientRecordsScreen() {
 
   const [tab, setTab] =
     useState<(typeof TABS)[number]>('Consultations');
+  const [myLabs, setMyLabs] = useState<PatientLabTest[]>([]);
+  const [labsLoading, setLabsLoading] = useState(true);
+  const [labsError, setLabsError] = useState<string | null>(null);
+  const [labsRetry, setLabsRetry] = useState(0);
+
+  useFocusEffect(useCallback(() => {
+    if (tab !== 'Lab Reports') {
+      return;
+    }
+    const controller = new AbortController();
+    let active = true;
+    setMyLabs([]);
+    setLabsError(null);
+    setLabsLoading(true);
+
+    const loadLabs = async () => {
+      try {
+        if (!currentPatientId) {
+          throw new Error('Patient information is unavailable');
+        }
+        const data = await getPatientLabTests(currentPatientId, controller.signal);
+        if (active) {
+          setMyLabs(data);
+        }
+      } catch (error) {
+        if (active) {
+          setLabsError(getErrorMessage(error, 'Unable to load lab reports'));
+        }
+      } finally {
+        if (active) {
+          setLabsLoading(false);
+        }
+      }
+    };
+    loadLabs();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [currentPatientId, tab, labsRetry]));
 
   const patient = patients.find(
     p => p.id === currentPatientId,
@@ -106,10 +149,6 @@ export default function PatientRecordsScreen() {
 
   const myRx = prescriptions.filter(
     p => p.patientId === currentPatientId,
-  );
-
-  const myLabs = labOrders.filter(
-    l => l.patientId === currentPatientId,
   );
 
   const myRads = radiologyOrders.filter(
@@ -165,6 +204,7 @@ export default function PatientRecordsScreen() {
 
       {/* Tabs */}
       <ScrollView
+      style={{ flexGrow: 0 }}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{
@@ -301,17 +341,28 @@ export default function PatientRecordsScreen() {
 
         {/* Lab Reports */}
         {tab === 'Lab Reports' &&
-          (myLabs.length > 0 ? (
+          (labsLoading ? (
+            <ActivityIndicator size="large" color={Colors.primary[600]} />
+          ) : labsError ? (
+            <View>
+              <EmptyState
+                icon={<FlaskConical size={48} color={Colors.neutral[300]} />}
+                title="Unable to load lab reports"
+                message={labsError}
+              />
+              <TouchableOpacity
+                style={styles.downloadBtn}
+                onPress={() => setLabsRetry(value => value + 1)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.downloadBtnText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : myLabs.length > 0 ? (
             myLabs.map(lab => (
               <Card
-                key={lab.id}
+                key={`${lab.type}-${lab.reference_id}-${lab.laboratory_id}`}
                 style={styles.recordCard}
-                onPress={() =>
-                  showToast(
-                    'Lab report opened',
-                    'info',
-                  )
-                }
               >
                 <View style={styles.recordTop}>
                   <View
@@ -331,16 +382,28 @@ export default function PatientRecordsScreen() {
 
                   <View style={styles.recordInfo}>
                     <Text style={styles.recordTitle}>
-                      {lab.test}
+                      {lab.test_name}
                     </Text>
 
                     <Text style={styles.recordDesc}>
-                      {lab.doctorName} · {lab.date}
+                      {lab.sample_type} · {new Date(lab.ordered_at).toLocaleDateString()}
                     </Text>
                   </View>
 
-                  <StatusBadge status={lab.status} />
+                  <StatusBadge status={lab.test_status.toLowerCase()} />
                 </View>
+                <Text style={styles.recordMeds}>
+                  Priority: {lab.priority} · Source: {lab.source_label}
+                </Text>
+                <Text style={styles.recordMeds}>
+                  Sample: {lab.sample_status}
+                  {lab.approval_status ? ` · Approval: ${lab.approval_status}` : ''}
+                </Text>
+                <Text style={styles.recordMeds}>
+                  {lab.can_download && lab.download_url
+                    ? 'Report available'
+                    : 'Report not ready'}
+                </Text>
               </Card>
             ))
           ) : (

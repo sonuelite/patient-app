@@ -5,6 +5,48 @@ export {apiClient} from './client';
 import {normalizePatientStates, PatientStateOption} from '../utils/patientStateOptions';
 import axios from 'axios';
 
+export interface PatientLabTest {
+  type: string;
+  reference_id: number;
+  laboratory_id: number;
+  test_name: string;
+  sample_type: string;
+  test_status: string;
+  priority: string;
+  ordered_at: string;
+  sample_status: string;
+  collected_at: string | null;
+  received_at: string | null;
+  approval_status: string | null;
+  approved_at: string | null;
+  approval_signature: string | null;
+  emergency_referral_id: number | null;
+  source_label: string;
+  download_status: string;
+  can_download: boolean;
+  download_url: string | null;
+}
+
+export async function getPatientLabTests(
+  patientId: string | number,
+  signal?: AbortSignal,
+): Promise<PatientLabTest[]> {
+  const response = await apiClient.get<{
+    success: boolean;
+    message?: string;
+    count: number;
+    data: PatientLabTest[];
+  }>('/api/v1/patient/patient-lab-tests', {
+    params: {patient_id: patientId},
+    headers: {'x-entity-id': '1'},
+    signal,
+  });
+  if (response.data.success !== true || !Array.isArray(response.data.data)) {
+    throw new Error(response.data.message || 'Unable to load lab reports');
+  }
+  return response.data.data;
+}
+
 export interface PatientVitals {
   id: number;
   patient_id: number;
