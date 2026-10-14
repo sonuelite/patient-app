@@ -573,75 +573,66 @@ export default function PatientRecordsScreen() {
               </TouchableOpacity>
             </View>
           ) : myLabs.length > 0 ? (
-            myLabs.map(lab => (
-              <Card
-                key={`${lab.type}-${lab.reference_id}-${lab.laboratory_id}`}
-                style={styles.recordCard}
-              >
-                <View style={styles.recordTop}>
-                  <View
-                    style={[
-                      styles.recordIcon,
-                      {
-                        backgroundColor:
-                          Colors.warning[50],
-                      },
-                    ]}
-                  >
-                    <FlaskConical
-                      size={18}
-                      color={Colors.warning[600]}
-                    />
-                  </View>
+            <View style={styles.labGrid}>
+              {myLabs.map(lab => (
+                <Card
+                  key={`${lab.type}-${lab.reference_id}-${lab.laboratory_id}`}
+                  style={styles.labCard}
+                  padding={Spacing.md}
+                >
+                  <View style={styles.labDetails}>
+                    <View
+                      style={[
+                        styles.labIcon,
+                        {
+                          backgroundColor:
+                            Colors.warning[50],
+                        },
+                      ]}
+                    >
+                      <FlaskConical
+                        size={18}
+                        color={Colors.warning[600]}
+                      />
+                    </View>
 
-                  <View style={styles.recordInfo}>
+                  <View>
                     <Text style={styles.recordTitle}>
                       {lab.test_name}
                     </Text>
 
                     <Text style={styles.recordDesc}>
-                      {lab.sample_type} · {new Date(lab.ordered_at).toLocaleDateString()}
+                      Type: {lab.sample_type || lab.type}
+                    </Text>
+                    <Text style={styles.recordDesc}>
+                      {new Date(lab.ordered_at).toLocaleDateString()}
                     </Text>
                   </View>
 
-                  <StatusBadge status={lab.test_status.toLowerCase()} />
                 </View>
-                <Text style={styles.recordMeds}>
-                  Priority: {lab.priority} · Source: {lab.source_label}
-                </Text>
-                <Text style={styles.recordMeds}>
-                  Sample: {lab.sample_status}
-                  {lab.approval_status ? ` · Approval: ${lab.approval_status}` : ''}
-                </Text>
-                <Text style={styles.recordMeds}>
-                  {lab.can_download && lab.download_url
-                    ? 'Report available'
-                    : 'Report not ready'}
-                </Text>
-                {lab.can_download && (
                   <TouchableOpacity
-                    style={styles.downloadBtn}
+                    style={[styles.downloadBtn, !lab.can_download && styles.labDownloadDisabled]}
                     onPress={() => handleDownloadLab(lab)}
-                    disabled={downloadingLab !== null}
+                    disabled={!lab.can_download || downloadingLab !== null}
                     accessibilityRole="button"
                     accessibilityLabel={`Download report for ${lab.test_name}`}
-                    accessibilityState={{disabled: downloadingLab !== null}}
+                    accessibilityState={{disabled: !lab.can_download || downloadingLab !== null}}
                   >
                     {downloadingLab === `${lab.type}-${lab.reference_id}-${lab.laboratory_id}` ? (
                       <>
                         <ActivityIndicator size="small" color={Colors.primary[600]} />
-                        <Text style={styles.downloadBtnText}>Downloading...</Text>
+                        <Text style={styles.downloadBtnText}>Loading...</Text>
                       </>
                     ) : (
                       <>
                         <FileCheck size={16} color={Colors.primary[600]} />
-                        <Text style={styles.downloadBtnText}>Download Report</Text>
+                        <Text style={styles.downloadBtnText}>Download</Text>
                       </>
                     )}
                   </TouchableOpacity>
-                )}
               </Card>
-            ))
+            ))}
+            </View>
           ) : (
             <EmptyState
               icon={
@@ -1099,6 +1090,34 @@ const styles = StyleSheet.create({
 
   recordCard: {
     marginBottom: Spacing.sm,
+  },
+
+  labGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: Spacing.md,
+  },
+
+  labCard: {
+    width: '48%',
+    justifyContent: 'space-between',
+  },
+
+  labDetails: {
+    gap: Spacing.sm,
+  },
+
+  labIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  labDownloadDisabled: {
+    opacity: 0.5,
   },
 
   recordTop: {
