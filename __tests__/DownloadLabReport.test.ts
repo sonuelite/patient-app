@@ -1,10 +1,10 @@
 import {Platform} from 'react-native';
 import BlobUtil from 'react-native-blob-util';
-import {downloadLabReport} from '../src/utils/downloadLabReport';
-import type {PatientLabTest} from '../src/network/api';
+import {canDownloadRadiologyReport, downloadLabReport, downloadRadiologyReport} from '../src/utils/downloadLabReport';
+import type {PatientLabTest, PatientRadiologyTest} from '../src/network/api';
 
 jest.mock('../src/store', () => ({store: {
-  getState: () => ({auth: {accessToken: 'stored-token', isLoggedIn: true}}),
+  getState: () => ({auth: {accessToken: 'stored-token', isLoggedIn: true, selectedEntityId: '7'}}),
 }}));
 jest.mock('../src/network/client', () => ({apiClient: {
   getUri: ({url}: {url: string}) => `https://example.com${url}`,
@@ -61,5 +61,28 @@ test('does not save HTTP errors or non-PDF responses', async () => {
 
 test('does not request reports that are not ready', async () => {
   await expect(downloadLabReport({...lab, can_download: false})).rejects.toThrow('not ready');
+  expect(fetchPdf).not.toHaveBeenCalled();
+});
+
+const radiology = {type: 'direct', reference_id: 25, approval_status: 'APPROVED',
+  can_download: true} as PatientRadiologyTest;
+
+test('downloads an approved radiology PDF with the selected entity and returns it for viewing', async () => {
+  const result = await downloadRadiologyReport(radiology);
+  expect(fetchPdf).toHaveBeenCalledWith('GET',
+    'https://example.com/api/v1/patient/radiology-report/pdf/direct/25',
+    {Authorization: 'Bearer stored-token', 'x-entity-id': '7', Accept: 'application/pdf'});
+  expect(result.path).toMatch(/^\/cache\/radiology-report-direct-25-.*\.pdf$/);
+  expect(BlobUtil.MediaCollection.copyToMediaStore).toHaveBeenCalled();
+});
+
+test.each([
+  {approval_status: 'REJECT', can_download: true},
+  {approval_status: null, can_download: true},
+  {approval_status: 'APPROVED', can_download: false},
+])('blocks radiology downloads that are not approved and ready: %j', async values => {
+  const report = {...radiology, ...values};
+  expect(canDownloadRadiologyReport(report)).toBe(false);
+  await expect(downloadRadiologyReport(report)).rejects.toThrow('Only approved radiology reports');
   expect(fetchPdf).not.toHaveBeenCalled();
 });

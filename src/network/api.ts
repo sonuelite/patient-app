@@ -29,6 +29,8 @@ export interface PatientLabTest {
 
 export async function getPatientLabTests(
   patientId: string | number,
+  startDate: string,
+  endDate: string,
   signal?: AbortSignal,
 ): Promise<PatientLabTest[]> {
   const response = await apiClient.get<{
@@ -37,12 +39,60 @@ export async function getPatientLabTests(
     count: number;
     data: PatientLabTest[];
   }>('/api/v1/patient/patient-lab-tests', {
-    params: {patient_id: patientId},
+    params: {patient_id: patientId, start_date: startDate, end_date: endDate},
     headers: {'x-entity-id': '1'},
     signal,
   });
   if (response.data.success !== true || !Array.isArray(response.data.data)) {
     throw new Error(response.data.message || 'Unable to load lab reports');
+  }
+  return response.data.data;
+}
+
+export interface PatientRadiologyTest {
+  type: string;
+  reference_id: number;
+  radiology_id: number;
+  test_name: string;
+  modality: string;
+  outsourced: number;
+  external_lab_name: string | null;
+  test_status: string;
+  priority: string;
+  ordered_at: string;
+  approval_status: string | null;
+  approved_at: string | null;
+  approval_signature: string | null;
+  report_id: number | null;
+  findings: string | null;
+  impression: string | null;
+  image_url: string | null;
+  video_url: string | null;
+  dicom_urls: string | string[] | null;
+  report_created_at: string | null;
+  emergency_referral_id: number | null;
+  source_label: string;
+  dicom_files: unknown[];
+  download_status: string;
+  can_download: boolean;
+  download_url: string | null;
+}
+
+export async function getPatientRadiologyTests(
+  patientId: string | number,
+  startDate: string,
+  endDate: string,
+  signal?: AbortSignal,
+): Promise<PatientRadiologyTest[]> {
+  const response = await apiClient.get<{
+    success: boolean; message?: string; count: number; data: PatientRadiologyTest[];
+  }>('/api/v1/patient/patient-radiology-tests', {
+    params: {patient_id: patientId, start_date: startDate, end_date: endDate},
+    headers: {'x-entity-id': '1'},
+    signal,
+  });
+  if (response.data.success !== true || !Array.isArray(response.data.data)) {
+    throw new Error(response.data.message || 'Unable to load radiology reports');
   }
   return response.data.data;
 }

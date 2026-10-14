@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Modal,
+  TextInput,
 } from 'react-native';
+import moment from 'moment';
 import Pdf from 'react-native-pdf';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,10 +47,10 @@ import {
 } from 'lucide-react-native';
 
 import { useApp } from '../../../context/AppContext';
-import { getPatientLabTests } from '../../../network/api';
-import type { PatientLabTest } from '../../../network/api';
+import { getPatientLabTests, getPatientRadiologyTests } from '../../../network/api';
+import type { PatientLabTest, PatientRadiologyTest } from '../../../network/api';
 import { getErrorMessage } from '../../../utils/apiError';
-import { downloadLabReport } from '../../../utils/downloadLabReport';
+import { canDownloadRadiologyReport, downloadLabReport, downloadRadiologyReport } from '../../../utils/downloadLabReport';
 
 const TABS = [
   'Consultations',
@@ -92,7 +94,6 @@ export default function PatientRecordsScreen() {
     currentPatientId,
     appointments,
     prescriptions,
-    radiologyOrders,
     documents,
     patients,
     showToast,
@@ -101,9 +102,54 @@ export default function PatientRecordsScreen() {
   const [tab, setTab] =
     useState<(typeof TABS)[number]>('Consultations');
   const [myLabs, setMyLabs] = useState<PatientLabTest[]>([]);
-  const [labsLoading, setLabsLoading] = useState(true);
+  const [labsLoading, setLabsLoading] = useState(false);
   const [labsError, setLabsError] = useState<string | null>(null);
-  const [labsRetry, setLabsRetry] = useState(0);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [filterError, setFilterError] = useState<string | null>(null);
+  const [labFilter, setLabFilter] = useState<{
+    patientId: string; startDate: string; endDate: string;
+  } | null>(null);
+  const [myRads, setMyRads] = useState<PatientRadiologyTest[]>([]);
+  const [radsLoading, setRadsLoading] = useState(false);
+  const [radsError, setRadsError] = useState<string | null>(null);
+  const [radStartDate, setRadStartDate] = useState('');
+  const [radEndDate, setRadEndDate] = useState('');
+  const [radFilterError, setRadFilterError] = useState<string | null>(null);
+  const [radFilter, setRadFilter] = useState<typeof labFilter>(null);
+  const isRadiology = tab === 'Radiology';
+  const activeStartDate = isRadiology ? radStartDate : startDate;
+  const activeEndDate = isRadiology ? radEndDate : endDate;
+  const activeFilterError = isRadiology ? radFilterError : filterError;
+  const activeFilter = isRadiology ? radFilter : labFilter;
+  const setActiveStartDate = isRadiology ? setRadStartDate : setStartDate;
+  const setActiveEndDate = isRadiology ? setRadEndDate : setEndDate;
+  const setActiveFilterError = isRadiology ? setRadFilterError : setFilterError;
+
+  const applyDateFilter = () => {
+    const start = moment(activeStartDate, 'YYYY-MM-DD', true);
+    const end = moment(activeEndDate, 'YYYY-MM-DD', true);
+    if (!start.isValid() || !end.isValid()) {
+      setActiveFilterError('Enter both dates in YYYY-MM-DD format.');
+      return;
+    }
+    if (start.isAfter(end, 'day')) {
+      setActiveFilterError('Start date must be on or before end date.');
+      return;
+    }
+    setActiveFilterError(null);
+    if (isRadiology) {
+      setMyRads([]);
+      setRadsError(null);
+      setRadsLoading(true);
+      setRadFilter({patientId: currentPatientId, startDate: radStartDate, endDate: radEndDate});
+      return;
+    }
+    setMyLabs([]);
+    setLabsError(null);
+    setLabsLoading(true);
+    setLabFilter({patientId: currentPatientId, startDate, endDate});
+  };
   const [downloadingLab, setDownloadingLab] = useState<string | null>(null);
   const downloadInProgress = useRef(false);
   const [report, setReport] = useState<{path: string; title: string; patientId: string} | null>(null);
@@ -132,6 +178,29 @@ export default function PatientRecordsScreen() {
 
   const closeReport = () => setReport(null);
 
+  const handleDownloadRadiology = async (rad: PatientRadiologyTest) => {
+    if (downloadInProgress.current || !canDownloadRadiologyReport(rad)) {
+      return;
+    }
+    downloadInProgress.current = true;
+    setDownloadingLab(`radiology-${rad.type}-${rad.reference_id}-${rad.radiology_id}`);
+    try {
+      const result = await downloadRadiologyReport(rad);
+      if (!mounted.current || activePatientId.current !== currentPatientId) {
+        await ReactNativeBlobUtil.fs.unlink(result.path).catch(() => undefined);
+        return;
+      }
+      setViewerError(null);
+      setPageInfo('');
+      setReport({path: result.path, title: rad.test_name.trim(), patientId: currentPatientId});
+    } catch (error) {
+      showToast(getErrorMessage(error, 'Unable to download radiology report'), 'error');
+    } finally {
+      downloadInProgress.current = false;
+      if (mounted.current) {setDownloadingLab(null);}
+    }
+  };
+
   const handleDownloadLab = async (lab: PatientLabTest) => {
     if (downloadInProgress.current) {
       return;
@@ -159,6 +228,12 @@ export default function PatientRecordsScreen() {
     if (tab !== 'Lab Reports') {
       return;
     }
+    if (!labFilter || labFilter.patientId !== currentPatientId) {
+      setMyLabs([]);
+      setLabsError(null);
+      setLabsLoading(false);
+      return;
+    }
     const controller = new AbortController();
     let active = true;
     setMyLabs([]);
@@ -170,7 +245,9 @@ export default function PatientRecordsScreen() {
         if (!currentPatientId) {
           throw new Error('Patient information is unavailable');
         }
-        const data = await getPatientLabTests(currentPatientId, controller.signal);
+        const data = await getPatientLabTests(
+          currentPatientId, labFilter.startDate, labFilter.endDate, controller.signal,
+        );
         if (active) {
           setMyLabs(data);
         }
@@ -189,9 +266,7 @@ export default function PatientRecordsScreen() {
       active = false;
       controller.abort();
     };
-  // Changing the retry counter deliberately restarts the focused request.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPatientId, tab, labsRetry]));
+  }, [currentPatientId, tab, labFilter]));
 
   const patient = patients.find(
     p => p.id === currentPatientId,
@@ -207,9 +282,37 @@ export default function PatientRecordsScreen() {
     p => p.patientId === currentPatientId,
   );
 
-  const myRads = radiologyOrders.filter(
-    r => r.patientId === currentPatientId,
-  );
+  useFocusEffect(useCallback(() => {
+    if (tab !== 'Radiology') {
+      return;
+    }
+    setMyRads([]);
+    setRadsError(null);
+    if (!radFilter || radFilter.patientId !== currentPatientId) {
+      setRadsLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    let active = true;
+    setRadsLoading(true);
+    const loadRadiology = async () => {
+      try {
+        if (!currentPatientId) {
+          throw new Error('Patient information is unavailable');
+        }
+        const data = await getPatientRadiologyTests(
+          currentPatientId, radFilter.startDate, radFilter.endDate, controller.signal,
+        );
+        if (active) {setMyRads(data);}
+      } catch (error) {
+        if (active) {setRadsError(getErrorMessage(error, 'Unable to load radiology reports'));}
+      } finally {
+        if (active) {setRadsLoading(false);}
+      }
+    };
+    loadRadiology();
+    return () => {active = false; controller.abort();};
+  }, [currentPatientId, tab, radFilter]));
 
   const myDocs = documents.filter(
     d => d.patientId === currentPatientId,
@@ -396,8 +499,63 @@ export default function PatientRecordsScreen() {
           ))}
 
         {/* Lab Reports */}
+        {(tab === 'Lab Reports' || tab === 'Radiology') && (
+          <Card style={styles.recordCard}>
+            <Text style={styles.recordTitle}>Filter by date</Text>
+            <Text style={styles.recordDesc}>Enter dates as YYYY-MM-DD</Text>
+            <View style={styles.dateFilterRow}>
+              <View style={styles.recordInfo}>
+                <Text style={styles.recordMeds}>Start date</Text>
+                <TextInput
+                  style={styles.dateInput}
+                  value={activeStartDate}
+                  onChangeText={value => {setActiveStartDate(value); setActiveFilterError(null);}}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={Colors.neutral[400]}
+                  accessibilityLabel={`${tab} start date`}
+                  maxLength={10}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+              <View style={styles.recordInfo}>
+                <Text style={styles.recordMeds}>End date</Text>
+                <TextInput
+                  style={styles.dateInput}
+                  value={activeEndDate}
+                  onChangeText={value => {setActiveEndDate(value); setActiveFilterError(null);}}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={Colors.neutral[400]}
+                  accessibilityLabel={`${tab} end date`}
+                  maxLength={10}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+            </View>
+            {!!activeFilterError && <Text style={styles.filterError}>{activeFilterError}</Text>}
+            <TouchableOpacity
+              style={styles.downloadBtn}
+              onPress={applyDateFilter}
+              accessibilityRole="button"
+            >
+              <Text style={styles.downloadBtnText}>Show Reports</Text>
+            </TouchableOpacity>
+            {activeFilter?.patientId === currentPatientId && (
+              <Text style={styles.recordMeds}>
+                Showing: {activeFilter.startDate} to {activeFilter.endDate}
+              </Text>
+            )}
+          </Card>
+        )}
         {tab === 'Lab Reports' &&
-          (labsLoading ? (
+          (!labFilter || labFilter.patientId !== currentPatientId ? (
+            <EmptyState
+              icon={<FlaskConical size={48} color={Colors.neutral[300]} />}
+              title="Select a date range"
+              message="Choose start and end dates, then tap Show Reports."
+            />
+          ) : labsLoading ? (
             <ActivityIndicator size="large" color={Colors.primary[600]} />
           ) : labsError ? (
             <View>
@@ -408,7 +566,7 @@ export default function PatientRecordsScreen() {
               />
               <TouchableOpacity
                 style={styles.downloadBtn}
-                onPress={() => setLabsRetry(value => value + 1)}
+                onPress={() => {setLabsLoading(true); setLabFilter({...labFilter});}}
                 accessibilityRole="button"
               >
                 <Text style={styles.downloadBtnText}>Retry</Text>
@@ -493,23 +651,40 @@ export default function PatientRecordsScreen() {
                 />
               }
               title="No lab reports"
-              message="Your lab reports will appear here."
+              message="No lab reports were found for the selected date range."
             />
           ))}
 
         {/* Radiology */}
         {tab === 'Radiology' &&
-          (myRads.length > 0 ? (
+          (!radFilter || radFilter.patientId !== currentPatientId ? (
+            <EmptyState
+              icon={<ImageIcon size={48} color={Colors.neutral[300]} />}
+              title="Select a date range"
+              message="Choose start and end dates, then tap Show Reports."
+            />
+          ) : radsLoading ? (
+            <ActivityIndicator size="large" color={Colors.primary[600]} />
+          ) : radsError ? (
+            <View>
+              <EmptyState
+                icon={<ImageIcon size={48} color={Colors.neutral[300]} />}
+                title="Unable to load radiology reports"
+                message={radsError}
+              />
+              <TouchableOpacity
+                style={styles.downloadBtn}
+                onPress={() => {setRadsLoading(true); setRadFilter({...radFilter});}}
+                accessibilityRole="button"
+              >
+                <Text style={styles.downloadBtnText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : myRads.length > 0 ? (
             myRads.map(rad => (
               <Card
-                key={rad.id}
+                key={`${rad.type}-${rad.reference_id}-${rad.radiology_id}`}
                 style={styles.recordCard}
-                onPress={() =>
-                  showToast(
-                    'Radiology report opened',
-                    'info',
-                  )
-                }
               >
                 <View style={styles.recordTop}>
                   <View
@@ -529,17 +704,47 @@ export default function PatientRecordsScreen() {
 
                   <View style={styles.recordInfo}>
                     <Text style={styles.recordTitle}>
-                      {rad.type} -{' '}
-                      {rad.indication || 'Imaging'}
+                      {rad.test_name.trim()}
                     </Text>
 
                     <Text style={styles.recordDesc}>
-                      {rad.doctorName} · {rad.date}
+                      {rad.modality} · {new Date(rad.ordered_at).toLocaleDateString()}
                     </Text>
                   </View>
 
-                  <StatusBadge status={rad.status} />
+                  <Badge
+                    label={rad.test_status === 'PROGRESS' ? 'In progress' : rad.test_status === 'REJECT' ? 'Rejected' : rad.test_status}
+                    color={rad.test_status === 'REJECT' ? 'error' : rad.test_status === 'COMPLETED' ? 'success' : 'warning'}
+                  />
                 </View>
+                <Text style={styles.recordMeds}>Priority: {rad.priority} · Source: {rad.source_label}</Text>
+                {!!rad.approval_status && <Text style={styles.recordMeds}>Approval: {rad.approval_status}</Text>}
+                {!!rad.external_lab_name && <Text style={styles.recordMeds}>External lab: {rad.external_lab_name}</Text>}
+                <Text style={styles.recordMeds}>
+                  {rad.download_status === 'REJECTED' ? 'Report rejected' : canDownloadRadiologyReport(rad) ? 'Report available' : 'Report not ready'}
+                </Text>
+                {canDownloadRadiologyReport(rad) && (
+                  <TouchableOpacity
+                    style={styles.downloadBtn}
+                    onPress={() => handleDownloadRadiology(rad)}
+                    disabled={downloadingLab !== null}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Download and view report for ${rad.test_name.trim()}`}
+                    accessibilityState={{disabled: downloadingLab !== null}}
+                  >
+                    {downloadingLab === `radiology-${rad.type}-${rad.reference_id}-${rad.radiology_id}` ? (
+                      <>
+                        <ActivityIndicator size="small" color={Colors.primary[600]} />
+                        <Text style={styles.downloadBtnText}>Downloading...</Text>
+                      </>
+                    ) : (
+                      <>
+                        <FileCheck size={16} color={Colors.primary[600]} />
+                        <Text style={styles.downloadBtnText}>Download Report</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
               </Card>
             ))
           ) : (
@@ -551,7 +756,7 @@ export default function PatientRecordsScreen() {
                 />
               }
               title="No radiology"
-              message="Your radiology reports will appear here."
+              message="No radiology reports were found for the selected date range."
             />
           ))}
 
@@ -814,6 +1019,24 @@ export default function PatientRecordsScreen() {
 }
 
 const styles = StyleSheet.create({
+  dateFilterRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  dateInput: {
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+    borderRadius: Radius.md,
+    padding: Spacing.sm,
+    marginTop: Spacing.xs,
+    color: Colors.neutral[900],
+    fontSize: FontSize.sm,
+  },
+  filterError: {
+    color: Colors.error[600],
+    fontSize: FontSize.sm,
+    marginTop: Spacing.sm,
+  },
   viewerHeader: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,16 +1,36 @@
 import {PermissionsAndroid, Platform} from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import {apiClient} from '../network/client';
-import type {PatientLabTest} from '../network/api';
+import type {PatientLabTest, PatientRadiologyTest} from '../network/api';
 import {store} from '../store';
 
 export async function downloadLabReport(lab: PatientLabTest): Promise<{name: string; path: string}> {
   if (!lab.can_download) {
     throw new Error('This lab report is not ready for download');
   }
+  return downloadPdfReport(lab, 'lab', '1');
+}
+
+export function canDownloadRadiologyReport(report: PatientRadiologyTest): boolean {
+  return report.approval_status?.toUpperCase() === 'APPROVED' && report.can_download;
+}
+
+export async function downloadRadiologyReport(report: PatientRadiologyTest): Promise<{name: string; path: string}> {
+  if (!canDownloadRadiologyReport(report)) {
+    throw new Error('Only approved radiology reports that are ready can be downloaded');
+  }
+  const entityId = store.getState().auth.selectedEntityId ?? '1';
+  return downloadPdfReport(report, 'radiology', entityId);
+}
+
+async function downloadPdfReport(
+  report: {type: string; reference_id: number},
+  kind: 'lab' | 'radiology',
+  entityId: string,
+): Promise<{name: string; path: string}> {
   const {accessToken, isLoggedIn} = store.getState().auth;
   if (!isLoggedIn || !accessToken) {
-    throw new Error('Please sign in to download your lab report');
+    throw new Error(`Please sign in to download your ${kind} report`);
   }
   if (Platform.OS === 'android' && Number(Platform.Version) < 29) {
     const permission = await PermissionsAndroid.request(
@@ -23,20 +43,20 @@ export async function downloadLabReport(lab: PatientLabTest): Promise<{name: str
 
   // The patient PDF route differs from download_url in the list response.
   const url = apiClient.getUri({
-    url: `/api/v1/patient/lab-report/pdf/${encodeURIComponent(lab.type)}/${lab.reference_id}`,
+    url: `/api/v1/patient/${kind}-report/pdf/${encodeURIComponent(report.type)}/${report.reference_id}`,
   });
-  const name = `lab-report-${lab.type.replace(/[^a-zA-Z0-9_-]/g, '_')}-${lab.reference_id}-${Date.now()}.pdf`;
+  const name = `${kind}-report-${report.type.replace(/[^a-zA-Z0-9_-]/g, '_')}-${report.reference_id}-${Date.now()}.pdf`;
   const path = `${ReactNativeBlobUtil.fs.dirs.CacheDir}/${name}`;
   let keepForPreview = false;
   try {
     const response = await ReactNativeBlobUtil.config({path, timeout: 30000})
       .fetch('GET', url, {
         Authorization: `Bearer ${accessToken}`,
-        'x-entity-id': '1',
+        'x-entity-id': entityId,
         Accept: 'application/pdf',
       });
     if (response.info().status < 200 || response.info().status >= 300) {
-      throw new Error('Unable to download lab report. Please try again');
+      throw new Error(`Unable to download ${kind} report. Please try again`);
     }
     // Reject JSON/HTML errors returned with HTTP 200 before saving as a PDF.
     const signaturePath = `${path}.header`;
