@@ -672,15 +672,17 @@ export default function PatientRecordsScreen() {
               </TouchableOpacity>
             </View>
           ) : myRads.length > 0 ? (
-            myRads.map(rad => (
+            <View style={styles.labGrid}>
+            {myRads.map(rad => (
               <Card
                 key={`${rad.type}-${rad.reference_id}-${rad.radiology_id}`}
-                style={styles.recordCard}
+                style={styles.labCard}
+                padding={Spacing.md}
               >
-                <View style={styles.recordTop}>
+                <View style={styles.labDetails}>
                   <View
                     style={[
-                      styles.recordIcon,
+                      styles.labIcon,
                       {
                         backgroundColor:
                           Colors.accent[50],
@@ -693,51 +695,43 @@ export default function PatientRecordsScreen() {
                     />
                   </View>
 
-                  <View style={styles.recordInfo}>
+                  <View>
                     <Text style={styles.recordTitle}>
                       {rad.test_name.trim()}
                     </Text>
 
                     <Text style={styles.recordDesc}>
-                      {rad.modality} · {new Date(rad.ordered_at).toLocaleDateString()}
+                      Type: {rad.modality || rad.type}
+                    </Text>
+                    <Text style={styles.recordDesc}>
+                      {new Date(rad.ordered_at).toLocaleDateString()}
                     </Text>
                   </View>
 
-                  <Badge
-                    label={rad.test_status === 'PROGRESS' ? 'In progress' : rad.test_status === 'REJECT' ? 'Rejected' : rad.test_status}
-                    color={rad.test_status === 'REJECT' ? 'error' : rad.test_status === 'COMPLETED' ? 'success' : 'warning'}
-                  />
                 </View>
-                <Text style={styles.recordMeds}>Priority: {rad.priority} · Source: {rad.source_label}</Text>
-                {!!rad.approval_status && <Text style={styles.recordMeds}>Approval: {rad.approval_status}</Text>}
-                {!!rad.external_lab_name && <Text style={styles.recordMeds}>External lab: {rad.external_lab_name}</Text>}
-                <Text style={styles.recordMeds}>
-                  {rad.download_status === 'REJECTED' ? 'Report rejected' : canDownloadRadiologyReport(rad) ? 'Report available' : 'Report not ready'}
-                </Text>
-                {canDownloadRadiologyReport(rad) && (
                   <TouchableOpacity
-                    style={styles.downloadBtn}
+                    style={[styles.downloadBtn, !canDownloadRadiologyReport(rad) && styles.labDownloadDisabled]}
                     onPress={() => handleDownloadRadiology(rad)}
-                    disabled={downloadingLab !== null}
+                    disabled={!canDownloadRadiologyReport(rad) || downloadingLab !== null}
                     accessibilityRole="button"
                     accessibilityLabel={`Download and view report for ${rad.test_name.trim()}`}
-                    accessibilityState={{disabled: downloadingLab !== null}}
+                    accessibilityState={{disabled: !canDownloadRadiologyReport(rad) || downloadingLab !== null}}
                   >
                     {downloadingLab === `radiology-${rad.type}-${rad.reference_id}-${rad.radiology_id}` ? (
                       <>
                         <ActivityIndicator size="small" color={Colors.primary[600]} />
-                        <Text style={styles.downloadBtnText}>Downloading...</Text>
+                        <Text style={styles.downloadBtnText}>Loading...</Text>
                       </>
                     ) : (
                       <>
                         <FileCheck size={16} color={Colors.primary[600]} />
-                        <Text style={styles.downloadBtnText}>Download Report</Text>
+                        <Text style={styles.downloadBtnText}>Download</Text>
                       </>
                     )}
                   </TouchableOpacity>
-                )}
               </Card>
-            ))
+            ))}
+            </View>
           ) : (
             <EmptyState
               icon={
