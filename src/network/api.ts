@@ -770,3 +770,102 @@ export const resetPatientPassword = async (
 
   return response.data;
 };
+
+export type PatientConsultationVisit = {
+  visit_index: number;
+  visit_id: number;
+  visit_date: string;
+  visit_type: string;
+  doctor_name: string;
+  department_name: string;
+  token_no: number;
+  consultation_status: string;
+  pdf_url: string;
+  chief_complaints: {
+    chief_complaint: string;
+    history_of_present_illness: string;
+    past_medical_surgical_history: string;
+    medication_history: string;
+    allergies: string;
+    personal_family_history: string;
+    primary_diagnosis: string;
+    icd10_code: string;
+    secondary_differential_diagnoses: string;
+    physical_examination: {
+      general_appearance: string;
+      cardiovascular: string;
+      respiratory: string;
+      gastrointestinal: string;
+      central_nervous: string;
+      musculoskeletal_skin: string;
+    };
+  };
+  plan_of_care: {
+    management_goals: string;
+    dietary_lifestyle_advice: string;
+    follow_up_schedule: string;
+    specialty_referral: string;
+    follow_ups: unknown[];
+    referrals: unknown[];
+  };
+  prescriptions: Array<{
+    prescription_id: number;
+    rx_number: string;
+    additional_notes: string;
+    doctor_name: string;
+    createdAt: string;
+    medicines: Array<{
+      medicine_name: string;
+      dosage_form: string;
+      dosage: string;
+      frequency: string;
+      duration: string;
+      route: string;
+      instructions: string;
+      quantity: number;
+    }>;
+  }>;
+  total_medicines_count: number;
+  diagnostic_orders_and_panic_values: {
+    orders: Array<{
+      order_id: number;
+      order_no: string;
+      order_date: string;
+      total_amount: string;
+      payment_status: string;
+      tests: Array<{
+        test_name: string;
+        test_type: string;
+        priority: string;
+        status: string;
+        method: string;
+      }>;
+    }>;
+    total_orders_count: number;
+    panic_values: unknown[];
+    has_panic_values: boolean;
+    all_lab_results: unknown[];
+  };
+  doctor_signature: string | null;
+};
+export async function getPatientVisitHistory(
+  patientId: string,
+  startDate: string,
+  endDate: string,
+  signal?: AbortSignal,
+): Promise<PatientConsultationVisit[]> {
+  const {data} = await apiClient.get<{
+    success: boolean;
+    message?: string;
+    visits: PatientConsultationVisit[];
+  }>(
+    `/api/v1/patient/patient-visit-history-report/${encodeURIComponent(
+      patientId,
+    )}`,
+    {params: {startDate, endDate}, signal},
+  );
+  if (!data.success || !Array.isArray(data.visits)) {
+    throw new Error(data.message || 'Unable to load consultations');
+  }
+  return data.visits;
+}

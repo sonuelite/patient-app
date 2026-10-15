@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Modal,
-  TextInput,
 } from 'react-native';
 import moment from 'moment';
+import ReportDateFilter from '../../../components/reportDateFilter/ReportDateFilter';
 import Pdf from 'react-native-pdf';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,12 +30,12 @@ import {
 } from '../../../components/ui/Card';
 
 import {
-  TimelineItem,
   StatusBadge,
 } from '../../../components/ui/DataDisplay';
 
 import {
   FileText,
+  Download,
   Pill,
   FlaskConical,
   Image as ImageIcon,
@@ -47,8 +47,8 @@ import {
 } from 'lucide-react-native';
 
 import { useApp } from '../../../context/AppContext';
-import { getPatientLabTests, getPatientRadiologyTests } from '../../../network/api';
-import type { PatientLabTest, PatientRadiologyTest } from '../../../network/api';
+import { getPatientVisitHistory, getPatientLabTests, getPatientRadiologyTests } from '../../../network/api';
+import type { PatientConsultationVisit, PatientLabTest, PatientRadiologyTest } from '../../../network/api';
 import { getErrorMessage } from '../../../utils/apiError';
 import { canDownloadRadiologyReport, downloadLabReport, downloadRadiologyReport } from '../../../utils/downloadLabReport';
 
@@ -92,7 +92,6 @@ export default function PatientRecordsScreen() {
 
   const {
     currentPatientId,
-    appointments,
     prescriptions,
     documents,
     patients,
@@ -104,52 +103,39 @@ export default function PatientRecordsScreen() {
   const [myLabs, setMyLabs] = useState<PatientLabTest[]>([]);
   const [labsLoading, setLabsLoading] = useState(false);
   const [labsError, setLabsError] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [filterError, setFilterError] = useState<string | null>(null);
   const [labFilter, setLabFilter] = useState<{
     patientId: string; startDate: string; endDate: string;
   } | null>(null);
   const [myRads, setMyRads] = useState<PatientRadiologyTest[]>([]);
   const [radsLoading, setRadsLoading] = useState(false);
   const [radsError, setRadsError] = useState<string | null>(null);
-  const [radStartDate, setRadStartDate] = useState('');
-  const [radEndDate, setRadEndDate] = useState('');
-  const [radFilterError, setRadFilterError] = useState<string | null>(null);
   const [radFilter, setRadFilter] = useState<typeof labFilter>(null);
-  const isRadiology = tab === 'Radiology';
-  const activeStartDate = isRadiology ? radStartDate : startDate;
-  const activeEndDate = isRadiology ? radEndDate : endDate;
-  const activeFilterError = isRadiology ? radFilterError : filterError;
-  const activeFilter = isRadiology ? radFilter : labFilter;
-  const setActiveStartDate = isRadiology ? setRadStartDate : setStartDate;
-  const setActiveEndDate = isRadiology ? setRadEndDate : setEndDate;
-  const setActiveFilterError = isRadiology ? setRadFilterError : setFilterError;
-
-  const applyDateFilter = () => {
-    const start = moment(activeStartDate, 'YYYY-MM-DD', true);
-    const end = moment(activeEndDate, 'YYYY-MM-DD', true);
-    if (!start.isValid() || !end.isValid()) {
-      setActiveFilterError('Enter both dates in YYYY-MM-DD format.');
-      return;
-    }
-    if (start.isAfter(end, 'day')) {
-      setActiveFilterError('Start date must be on or before end date.');
-      return;
-    }
-    setActiveFilterError(null);
-    if (isRadiology) {
-      setMyRads([]);
-      setRadsError(null);
-      setRadsLoading(true);
-      setRadFilter({patientId: currentPatientId, startDate: radStartDate, endDate: radEndDate});
-      return;
-    }
-    setMyLabs([]);
-    setLabsError(null);
-    setLabsLoading(true);
-    setLabFilter({patientId: currentPatientId, startDate, endDate});
-  };
+  const [visits, setVisits] = useState<PatientConsultationVisit[]>([]);
+  const [visitsPatientId, setVisitsPatientId] = useState<string | null>(null);
+  const [visitsLoading, setVisitsLoading] = useState(false);
+  const [visitsError, setVisitsError] = useState<string | null>(null);
+  const [visitFilter, setVisitFilter] = useState<{patientId: string; startDate: string; endDate: string} | null>(null);
+  const [expandedVisit, setExpandedVisit] = useState<number | null>(null);
+  const isConsultation = tab === 'Consultations';
+  useFocusEffect(useCallback(() => {
+    if (tab !== 'Consultations' || !visitFilter || visitFilter.patientId !== currentPatientId) {return;}
+    let active = true;
+    const controller = new AbortController();
+    setVisitsPatientId(currentPatientId);
+    setVisits([]); setExpandedVisit(null); setVisitsError(null); setVisitsLoading(true);
+    const load = async () => {
+      try {
+        if (!currentPatientId) {throw new Error('Patient information is unavailable');}
+        const data = await getPatientVisitHistory(currentPatientId, visitFilter.startDate, visitFilter.endDate, controller.signal);
+        if (active) {setVisits(data);}
+      } catch (error) {
+        if (active) {setVisitsError(getErrorMessage(error, 'Unable to load consultation reports'));}
+      } finally {if (active) {setVisitsLoading(false);}}
+    };
+    load();
+    return () => {active = false; controller.abort();};
+  }, [currentPatientId, tab, visitFilter]));
+  const activeFilter = isConsultation ? visitFilter : tab === 'Radiology' ? radFilter : labFilter;
   const [downloadingLab, setDownloadingLab] = useState<string | null>(null);
   const downloadInProgress = useRef(false);
   const [report, setReport] = useState<{path: string; title: string; patientId: string} | null>(null);
@@ -272,12 +258,6 @@ export default function PatientRecordsScreen() {
     p => p.id === currentPatientId,
   );
 
-  const completedAppts = appointments.filter(
-    a =>
-      a.patientId === currentPatientId &&
-      a.status === 'completed',
-  );
-
   const myRx = prescriptions.filter(
     p => p.patientId === currentPatientId,
   );
@@ -330,12 +310,6 @@ export default function PatientRecordsScreen() {
         },
       ]
     : [];
-
-  const openAppointment = (id: string) => {
-    navigation.navigate('AppointmentDetail', {
-      id,
-    });
-  };
 
   const openPrescription = (id: string) => {
     navigation.navigate('Prescription', {
@@ -402,46 +376,6 @@ export default function PatientRecordsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Consultations */}
-        {tab === 'Consultations' &&
-          (completedAppts.length > 0 ? (
-            <View style={styles.timeline}>
-              {completedAppts.map((apt, i) => (
-                <TouchableOpacity
-                  key={apt.id}
-                  onPress={() => openAppointment(apt.id)}
-                  activeOpacity={0.7}
-                >
-                  <TimelineItem
-                    date={apt.date}
-                    title={`${apt.department} Consultation`}
-                    subtitle={`${apt.doctorName} · ${apt.consultationType.toUpperCase()}`}
-                    isLast={
-                      i === completedAppts.length - 1
-                    }
-                    icon={
-                      <Stethoscope
-                        size={14}
-                        color={Colors.primary[600]}
-                      />
-                    }
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : (
-            <EmptyState
-              icon={
-                <Stethoscope
-                  size={48}
-                  color={Colors.neutral[300]}
-                />
-              }
-              title="No consultations"
-              message="Your consultation history will appear here."
-            />
-          ))}
-
         {/* Prescriptions */}
         {tab === 'Prescriptions' &&
           (myRx.length > 0 ? (
@@ -498,62 +432,96 @@ export default function PatientRecordsScreen() {
             />
           ))}
 
-        {/* Lab Reports */}
-        {(tab === 'Lab Reports' || tab === 'Radiology') && (
-          <Card style={styles.recordCard}>
-            <Text style={styles.recordTitle}>Filter by date</Text>
-            <Text style={styles.recordDesc}>Enter dates as YYYY-MM-DD</Text>
-            <View style={styles.dateFilterRow}>
-              <View style={styles.recordInfo}>
-                <Text style={styles.recordMeds}>Start date</Text>
-                <TextInput
-                  style={styles.dateInput}
-                  value={activeStartDate}
-                  onChangeText={value => {setActiveStartDate(value); setActiveFilterError(null);}}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={Colors.neutral[400]}
-                  accessibilityLabel={`${tab} start date`}
-                  maxLength={10}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+        {(tab === 'Lab Reports' || tab === 'Radiology' || isConsultation) && (
+          <ReportDateFilter
+            key={tab}
+            range={activeFilter?.patientId === currentPatientId ? activeFilter : null}
+            onApply={range => {
+              const filter = {patientId: currentPatientId, ...range};
+              if (isConsultation) {
+                setVisits([]); setVisitsError(null); setVisitsLoading(true); setVisitFilter(filter);
+              } else if (tab === 'Radiology') {
+                setMyRads([]); setRadsError(null); setRadsLoading(true); setRadFilter(filter);
+              } else {
+                setMyLabs([]); setLabsError(null); setLabsLoading(true); setLabFilter(filter);
+              }
+            }}
+          />
+        )}
+        {isConsultation && (!visitFilter || visitFilter.patientId !== currentPatientId ? (
+          <EmptyState icon={<Stethoscope size={48} color={Colors.neutral[300]} />} title="Select a date range" message="Choose start and end dates, then tap Apply filters to view consultations." />
+        ) : visitsLoading || visitsPatientId !== currentPatientId ? (
+          <ActivityIndicator size="large" color={Colors.primary[600]} />
+        ) : visitsError ? (
+          <View>
+            <EmptyState icon={<Stethoscope size={48} color={Colors.neutral[300]} />} title="Unable to load consultations" message={visitsError} />
+            <TouchableOpacity style={styles.downloadBtn} accessibilityRole="button" onPress={() => {setVisitsLoading(true); setVisitFilter({...visitFilter});}}><Text style={styles.downloadBtnText}>Retry</Text></TouchableOpacity>
+          </View>
+        ) : visits.length === 0 ? (
+          <EmptyState icon={<Stethoscope size={48} color={Colors.neutral[300]} />} title="No consultations" message="No consultations were found for the selected date range." />
+        ) : (
+          <>
+          <Text style={styles.reportCount}>{visits.length} {visits.length === 1 ? 'report' : 'reports'}</Text>
+          {visits.map(visit => (
+          <Card key={visit.visit_id} style={styles.recordCard}>
+            <TouchableOpacity accessibilityRole="button" accessibilityState={{expanded: expandedVisit === visit.visit_id}} onPress={() => setExpandedVisit(expandedVisit === visit.visit_id ? null : visit.visit_id)}>
+              <View style={styles.recordTop}>
+                <View style={[styles.recordIcon, {backgroundColor: Colors.primary[50]}]}><Stethoscope size={18} color={Colors.primary[600]} /></View>
+                <View style={styles.recordInfo}>
+                  <Text style={styles.recordTitle}>{visit.department_name || 'Consultation'}</Text>
+                  <Text style={styles.recordDesc}>{visit.doctor_name}</Text>
+                  <Text style={styles.recordDesc}>{moment(visit.visit_date).format('DD MMM YYYY')} ? {visit.visit_type}</Text>
+                </View>
+                <Badge label={visit.consultation_status || 'Unknown'} color={visit.consultation_status === 'COMPLETED' ? 'success' : 'primary'} />
               </View>
-              <View style={styles.recordInfo}>
-                <Text style={styles.recordMeds}>End date</Text>
-                <TextInput
-                  style={styles.dateInput}
-                  value={activeEndDate}
-                  onChangeText={value => {setActiveEndDate(value); setActiveFilterError(null);}}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={Colors.neutral[400]}
-                  accessibilityLabel={`${tab} end date`}
-                  maxLength={10}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-            </View>
-            {!!activeFilterError && <Text style={styles.filterError}>{activeFilterError}</Text>}
-            <TouchableOpacity
-              style={styles.downloadBtn}
-              onPress={applyDateFilter}
-              accessibilityRole="button"
-            >
-              <Text style={styles.downloadBtnText}>Show Reports</Text>
+              {!!visit.chief_complaints?.primary_diagnosis && <Text style={styles.dischargeText}>{visit.chief_complaints.primary_diagnosis}</Text>}
+              <View style={[styles.downloadBtn, styles.labReportDownload]}><Text style={styles.labReportDownloadText}>{expandedVisit === visit.visit_id ? 'Hide report' : 'View consultation report'}</Text></View>
             </TouchableOpacity>
-            {activeFilter?.patientId === currentPatientId && (
-              <Text style={styles.recordMeds}>
-                Showing: {activeFilter.startDate} to {activeFilter.endDate}
-              </Text>
+            {expandedVisit === visit.visit_id && (
+              <View style={styles.dischargeDetails}>
+                <Text style={styles.recordTitle}>Clinical assessment</Text>
+                {Object.entries(visit.chief_complaints || {}).map(([key, value]) => typeof value === 'string' && value.trim() ? (
+                  <View key={key}><Text style={styles.recordMeds}>{key.replace(/_/g, ' ')}</Text><Text style={styles.dischargeText}>{value}</Text></View>
+                ) : null)}
+                {Object.entries(visit.chief_complaints?.physical_examination || {}).map(([key, value]) => value ? <Text key={key} style={styles.dischargeText}>{key.replace(/_/g, ' ')}: {value}</Text> : null)}
+                <Text style={styles.recordTitle}>Plan of care</Text>
+                {(['management_goals', 'dietary_lifestyle_advice', 'follow_up_schedule', 'specialty_referral'] as const).map(key => visit.plan_of_care?.[key] ? (
+                  <View key={key}><Text style={styles.recordMeds}>{key.replace(/_/g, ' ')}</Text><Text style={styles.dischargeText}>{visit.plan_of_care[key]}</Text></View>
+                ) : null)}
+                <Text style={styles.recordTitle}>Medicines</Text>
+                {!(visit.prescriptions || []).some(rx => rx.medicines?.length) && <Text style={styles.dischargeText}>No medicines prescribed.</Text>}
+                {(visit.prescriptions || []).map(rx => (
+                  <View key={rx.prescription_id}>
+                    <Text style={styles.recordMeds}>{rx.rx_number}</Text>
+                    {(rx.medicines || []).map((medicine, index) => (
+                      <View key={index}>
+                        <Text style={styles.recordTitle}>{medicine.medicine_name}</Text>
+                        <Text style={styles.dischargeText}>{[medicine.dosage, medicine.frequency, medicine.duration, medicine.route].filter(Boolean).join(' ? ')}</Text>
+                        {!!medicine.instructions && <Text style={styles.dischargeText}>{medicine.instructions}</Text>}
+                      </View>
+                    ))}
+                    {!!rx.additional_notes && <Text style={styles.dischargeText}>{rx.additional_notes}</Text>}
+                  </View>
+                ))}
+                <Text style={styles.recordTitle}>Diagnostic orders</Text>
+                {!visit.diagnostic_orders_and_panic_values?.orders?.length && <Text style={styles.dischargeText}>No diagnostic orders.</Text>}
+                {(visit.diagnostic_orders_and_panic_values?.orders || []).map(order => (
+                  <View key={order.order_id}><Text style={styles.recordMeds}>{order.order_no}</Text>
+                    {(order.tests || []).map((test, index) => <Text key={index} style={styles.dischargeText}>{test.test_name} ? {test.test_type} ? {test.status}</Text>)}
+                  </View>
+                ))}
+              </View>
             )}
           </Card>
-        )}
+        ))}
+          </>
+        ))}
         {tab === 'Lab Reports' &&
           (!labFilter || labFilter.patientId !== currentPatientId ? (
             <EmptyState
               icon={<FlaskConical size={48} color={Colors.neutral[300]} />}
               title="Select a date range"
-              message="Choose start and end dates, then tap Show Reports."
+              message="Choose start and end dates, then tap Apply filters."
             />
           ) : labsLoading ? (
             <ActivityIndicator size="large" color={Colors.primary[600]} />
@@ -573,66 +541,44 @@ export default function PatientRecordsScreen() {
               </TouchableOpacity>
             </View>
           ) : myLabs.length > 0 ? (
+            <>
+            <Text style={styles.reportCount}>{myLabs.length} {myLabs.length === 1 ? 'report' : 'reports'}</Text>
             <View style={styles.labGrid}>
               {myLabs.map(lab => (
                 <Card
                   key={`${lab.type}-${lab.reference_id}-${lab.laboratory_id}`}
-                  style={styles.labCard}
-                  padding={Spacing.md}
+                  style={[styles.labCard, styles.compactLabCard]}
+                  padding={Spacing.sm}
                 >
-                  <View style={styles.labDetails}>
-                    <View
-                      style={[
-                        styles.labIcon,
-                        {
-                          backgroundColor:
-                            Colors.warning[50],
-                        },
-                      ]}
-                    >
-                      <FlaskConical
-                        size={18}
-                        color={Colors.warning[600]}
-                      />
+                  <View style={styles.compactLabHeading}>
+                    <FlaskConical size={25} color={Colors.primary[600]} />
+                    <View style={styles.recordInfo}>
+                      <Text style={styles.compactLabTitle} numberOfLines={1}>{lab.test_name}</Text>
+                      <Text style={styles.compactLabDate}>{moment(lab.ordered_at).format('D MMM YYYY')}</Text>
                     </View>
-
-                  <View>
-                    <Text style={styles.recordTitle}>
-                      {lab.test_name}
-                    </Text>
-
-                    <Text style={styles.recordDesc}>
-                      Type: {lab.sample_type || lab.type}
-                    </Text>
-                    <Text style={styles.recordDesc}>
-                      {new Date(lab.ordered_at).toLocaleDateString()}
-                    </Text>
                   </View>
-
-                </View>
                   <TouchableOpacity
-                    style={[styles.downloadBtn, !lab.can_download && styles.labDownloadDisabled]}
+                    style={[styles.compactPdfButton, !lab.can_download && styles.compactPdfDisabled]}
+                    hitSlop={4}
                     onPress={() => handleDownloadLab(lab)}
                     disabled={!lab.can_download || downloadingLab !== null}
                     accessibilityRole="button"
-                    accessibilityLabel={`Download report for ${lab.test_name}`}
+                    accessibilityLabel={lab.can_download ? `Download PDF report for ${lab.test_name}` : `PDF report for ${lab.test_name} is unavailable`}
                     accessibilityState={{disabled: !lab.can_download || downloadingLab !== null}}
                   >
                     {downloadingLab === `${lab.type}-${lab.reference_id}-${lab.laboratory_id}` ? (
-                      <>
-                        <ActivityIndicator size="small" color={Colors.primary[600]} />
-                        <Text style={styles.downloadBtnText}>Loading...</Text>
-                      </>
+                      <ActivityIndicator size="small" color={Colors.neutral[0]} />
                     ) : (
                       <>
-                        <FileCheck size={16} color={Colors.primary[600]} />
-                        <Text style={styles.downloadBtnText}>Download</Text>
+                        <Download size={16} color={lab.can_download ? Colors.neutral[0] : Colors.neutral[400]} />
+                        {lab.can_download && <Text style={styles.labReportDownloadText}>PDF</Text>}
                       </>
                     )}
                   </TouchableOpacity>
-              </Card>
+                </Card>
             ))}
             </View>
+            </>
           ) : (
             <EmptyState
               icon={
@@ -652,7 +598,7 @@ export default function PatientRecordsScreen() {
             <EmptyState
               icon={<ImageIcon size={48} color={Colors.neutral[300]} />}
               title="Select a date range"
-              message="Choose start and end dates, then tap Show Reports."
+              message="Choose start and end dates, then tap Apply filters."
             />
           ) : radsLoading ? (
             <ActivityIndicator size="large" color={Colors.primary[600]} />
@@ -672,6 +618,8 @@ export default function PatientRecordsScreen() {
               </TouchableOpacity>
             </View>
           ) : myRads.length > 0 ? (
+            <>
+            <Text style={styles.reportCount}>{myRads.length} {myRads.length === 1 ? 'report' : 'reports'}</Text>
             <View style={styles.labGrid}>
             {myRads.map(rad => (
               <Card
@@ -679,38 +627,14 @@ export default function PatientRecordsScreen() {
                 style={styles.labCard}
                 padding={Spacing.md}
               >
-                <View style={styles.labDetails}>
-                  <View
-                    style={[
-                      styles.labIcon,
-                      {
-                        backgroundColor:
-                          Colors.accent[50],
-                      },
-                    ]}
-                  >
-                    <ImageIcon
-                      size={18}
-                      color={Colors.accent[600]}
-                    />
-                  </View>
-
-                  <View>
-                    <Text style={styles.recordTitle}>
-                      {rad.test_name.trim()}
-                    </Text>
-
-                    <Text style={styles.recordDesc}>
-                      Type: {rad.modality || rad.type}
-                    </Text>
-                    <Text style={styles.recordDesc}>
-                      {new Date(rad.ordered_at).toLocaleDateString()}
-                    </Text>
-                  </View>
-
+                <View style={styles.labReportHeading}>
+                  <View style={styles.labReportIcon}><ImageIcon size={18} color={Colors.primary[600]} /></View>
+                  <Text style={styles.labReportTitle} numberOfLines={1}>{rad.test_name.trim()}</Text>
                 </View>
+                {/* <Text style={styles.recordDesc}>{rad.modality || rad.type}</Text> */}
+                <Text style={styles.recordDesc}>{moment(rad.ordered_at).format('D MMM YYYY')}</Text>
                   <TouchableOpacity
-                    style={[styles.downloadBtn, !canDownloadRadiologyReport(rad) && styles.labDownloadDisabled]}
+                    style={[styles.downloadBtn, styles.labReportDownload, !canDownloadRadiologyReport(rad) && styles.labDownloadDisabled]}
                     onPress={() => handleDownloadRadiology(rad)}
                     disabled={!canDownloadRadiologyReport(rad) || downloadingLab !== null}
                     accessibilityRole="button"
@@ -719,19 +643,20 @@ export default function PatientRecordsScreen() {
                   >
                     {downloadingLab === `radiology-${rad.type}-${rad.reference_id}-${rad.radiology_id}` ? (
                       <>
-                        <ActivityIndicator size="small" color={Colors.primary[600]} />
-                        <Text style={styles.downloadBtnText}>Loading...</Text>
+                        <ActivityIndicator size="small" color={Colors.neutral[0]} />
+                        <Text style={styles.labReportDownloadText}>Loading...</Text>
                       </>
                     ) : (
                       <>
-                        <FileCheck size={16} color={Colors.primary[600]} />
-                        <Text style={styles.downloadBtnText}>Download</Text>
+                        <FileCheck size={16} color={Colors.neutral[0]} />
+                        <Text style={styles.labReportDownloadText}>Download</Text>
                       </>
                     )}
                   </TouchableOpacity>
               </Card>
             ))}
             </View>
+            </>
           ) : (
             <EmptyState
               icon={
@@ -1004,19 +929,18 @@ export default function PatientRecordsScreen() {
 }
 
 const styles = StyleSheet.create({
-  dateFilterRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  dateInput: {
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    borderRadius: Radius.md,
-    padding: Spacing.sm,
-    marginTop: Spacing.xs,
-    color: Colors.neutral[900],
-    fontSize: FontSize.sm,
-  },
+  compactLabCard: {borderRadius: Radius.sm, borderWidth: 1, borderColor: Colors.primary[100]},
+  compactLabHeading: {flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm},
+  compactLabTitle: {fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.neutral[900]},
+  compactLabDate: {fontSize: FontSize.xs, color: Colors.neutral[500], marginTop: Spacing.xs},
+  compactPdfButton: {alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs, backgroundColor: Colors.primary[600], borderRadius: Radius.sm, paddingHorizontal: Spacing.sm, minHeight: 32, minWidth: 32, marginTop: Spacing.sm},
+  compactPdfDisabled: {backgroundColor: Colors.neutral[50], borderWidth: 1, borderColor: Colors.neutral[200]},
+  reportCount: {fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.neutral[900], marginBottom: Spacing.sm},
+  labReportHeading: {flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm},
+  labReportIcon: {width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.primary[50], alignItems: 'center', justifyContent: 'center'},
+  labReportTitle: {flex: 1, fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.neutral[900]},
+  labReportDownload: {backgroundColor: Colors.primary[600]},
+  labReportDownloadText: {color: Colors.neutral[0], fontSize: FontSize.sm, fontWeight: FontWeight.medium},
   filterError: {
     color: Colors.error[600],
     fontSize: FontSize.sm,
@@ -1078,9 +1002,6 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
   },
 
-  timeline: {
-    paddingTop: Spacing.sm,
-  },
 
   recordCard: {
     marginBottom: Spacing.sm,
@@ -1098,17 +1019,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 
-  labDetails: {
-    gap: Spacing.sm,
-  },
 
-  labIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 
   labDownloadDisabled: {
     opacity: 0.5,
