@@ -30,13 +30,8 @@ import {
 } from '../../../components/ui/Card';
 
 import {
-  StatusBadge,
-} from '../../../components/ui/DataDisplay';
-
-import {
   FileText,
   Download,
-  Pill,
   FlaskConical,
   Image as ImageIcon,
   FileCheck,
@@ -92,7 +87,6 @@ export default function PatientRecordsScreen() {
 
   const {
     currentPatientId,
-    prescriptions,
     documents,
     patients,
     showToast,
@@ -116,9 +110,9 @@ export default function PatientRecordsScreen() {
   const [visitsError, setVisitsError] = useState<string | null>(null);
   const [visitFilter, setVisitFilter] = useState<{patientId: string; startDate: string; endDate: string} | null>(null);
   const [expandedVisit, setExpandedVisit] = useState<number | null>(null);
-  const isConsultation = tab === 'Consultations';
+  const isPrescription = tab === 'Prescriptions';
   useFocusEffect(useCallback(() => {
-    if (tab !== 'Consultations' || !visitFilter || visitFilter.patientId !== currentPatientId) {return;}
+    if (tab !== 'Prescriptions' || !visitFilter || visitFilter.patientId !== currentPatientId) {return;}
     let active = true;
     const controller = new AbortController();
     setVisitsPatientId(currentPatientId);
@@ -129,13 +123,13 @@ export default function PatientRecordsScreen() {
         const data = await getPatientVisitHistory(currentPatientId, visitFilter.startDate, visitFilter.endDate, controller.signal);
         if (active) {setVisits(data);}
       } catch (error) {
-        if (active) {setVisitsError(getErrorMessage(error, 'Unable to load consultation reports'));}
+        if (active) {setVisitsError(getErrorMessage(error, 'Unable to load prescription reports'));}
       } finally {if (active) {setVisitsLoading(false);}}
     };
     load();
     return () => {active = false; controller.abort();};
   }, [currentPatientId, tab, visitFilter]));
-  const activeFilter = isConsultation ? visitFilter : tab === 'Radiology' ? radFilter : labFilter;
+  const activeFilter = isPrescription ? visitFilter : tab === 'Radiology' ? radFilter : labFilter;
   const [downloadingLab, setDownloadingLab] = useState<string | null>(null);
   const downloadInProgress = useRef(false);
   const [report, setReport] = useState<{path: string; title: string; patientId: string} | null>(null);
@@ -258,9 +252,6 @@ export default function PatientRecordsScreen() {
     p => p.id === currentPatientId,
   );
 
-  const myRx = prescriptions.filter(
-    p => p.patientId === currentPatientId,
-  );
 
   useFocusEffect(useCallback(() => {
     if (tab !== 'Radiology') {
@@ -310,12 +301,6 @@ export default function PatientRecordsScreen() {
         },
       ]
     : [];
-
-  const openPrescription = (id: string) => {
-    navigation.navigate('Prescription', {
-      id,
-    });
-  };
 
   const uploadDocument = () => {
     navigation.navigate('UploadDocument');
@@ -376,69 +361,21 @@ export default function PatientRecordsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Prescriptions */}
-        {tab === 'Prescriptions' &&
-          (myRx.length > 0 ? (
-            myRx.map(rx => (
-              <Card
-                key={rx.id}
-                style={styles.recordCard}
-                onPress={() => openPrescription(rx.id)}
-              >
-                <View style={styles.recordTop}>
-                  <View
-                    style={[
-                      styles.recordIcon,
-                      {
-                        backgroundColor:
-                          Colors.primary[50],
-                      },
-                    ]}
-                  >
-                    <Pill
-                      size={18}
-                      color={Colors.primary[600]}
-                    />
-                  </View>
+        {tab === 'Consultations' && (
+          <EmptyState
+            icon={<Stethoscope size={48} color={Colors.neutral[300]} />}
+            title="No consultations"
+            message="Your consultation history will appear here."
+          />
+        )}
 
-                  <View style={styles.recordInfo}>
-                    <Text style={styles.recordTitle}>
-                      {rx.diagnosis}
-                    </Text>
-
-                    <Text style={styles.recordDesc}>
-                      {rx.doctorName} · {rx.date}
-                    </Text>
-                  </View>
-
-                  <StatusBadge status={rx.status} />
-                </View>
-
-                <Text style={styles.recordMeds}>
-                  {rx.medicines.length} medicine(s) prescribed
-                </Text>
-              </Card>
-            ))
-          ) : (
-            <EmptyState
-              icon={
-                <Pill
-                  size={48}
-                  color={Colors.neutral[300]}
-                />
-              }
-              title="No prescriptions"
-              message="Your prescription history will appear here."
-            />
-          ))}
-
-        {(tab === 'Lab Reports' || tab === 'Radiology' || isConsultation) && (
+        {(tab === 'Lab Reports' || tab === 'Radiology' || isPrescription) && (
           <ReportDateFilter
             key={tab}
             range={activeFilter?.patientId === currentPatientId ? activeFilter : null}
             onApply={range => {
               const filter = {patientId: currentPatientId, ...range};
-              if (isConsultation) {
+              if (isPrescription) {
                 setVisits([]); setVisitsError(null); setVisitsLoading(true); setVisitFilter(filter);
               } else if (tab === 'Radiology') {
                 setMyRads([]); setRadsError(null); setRadsLoading(true); setRadFilter(filter);
@@ -448,17 +385,17 @@ export default function PatientRecordsScreen() {
             }}
           />
         )}
-        {isConsultation && (!visitFilter || visitFilter.patientId !== currentPatientId ? (
-          <EmptyState icon={<Stethoscope size={48} color={Colors.neutral[300]} />} title="Select a date range" message="Choose start and end dates, then tap Apply filters to view consultations." />
+        {isPrescription && (!visitFilter || visitFilter.patientId !== currentPatientId ? (
+          <EmptyState icon={<Stethoscope size={48} color={Colors.neutral[300]} />} title="Select a date range" message="Choose start and end dates, then tap Apply filters to view prescription reports." />
         ) : visitsLoading || visitsPatientId !== currentPatientId ? (
           <ActivityIndicator size="large" color={Colors.primary[600]} />
         ) : visitsError ? (
           <View>
-            <EmptyState icon={<Stethoscope size={48} color={Colors.neutral[300]} />} title="Unable to load consultations" message={visitsError} />
+            <EmptyState icon={<Stethoscope size={48} color={Colors.neutral[300]} />} title="Unable to load prescription reports" message={visitsError} />
             <TouchableOpacity style={styles.downloadBtn} accessibilityRole="button" onPress={() => {setVisitsLoading(true); setVisitFilter({...visitFilter});}}><Text style={styles.downloadBtnText}>Retry</Text></TouchableOpacity>
           </View>
         ) : visits.length === 0 ? (
-          <EmptyState icon={<Stethoscope size={48} color={Colors.neutral[300]} />} title="No consultations" message="No consultations were found for the selected date range." />
+          <EmptyState icon={<Stethoscope size={48} color={Colors.neutral[300]} />} title="No prescription reports" message="No prescription reports were found for the selected date range." />
         ) : (
           <>
           <Text style={styles.reportCount}>{visits.length} {visits.length === 1 ? 'report' : 'reports'}</Text>

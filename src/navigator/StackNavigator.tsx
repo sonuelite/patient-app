@@ -21,6 +21,7 @@ import EmergencyScreen from '../screens/quickActions/emergency/Emergency';
 import BillingScreen from '../screens/quickActions/billing/Billing';
 import ResetPassword from '../screens/auth/resetPassword/ResetPassword';
 import VitalsScreen from '../screens/patient/home/vitals/VitalsScreen';
+import BookTestsScreen from '../screens/quickActions/bookTests/BookTestsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -58,6 +59,7 @@ const StackNavigator = () => {
           <Stack.Screen name="EmergencyScreen" component={EmergencyScreen}/>
           <Stack.Screen name="BillingScreen" component={BillingScreen}/>
           <Stack.Screen name="VitalsScreen" component={VitalsScreen}/>
+          <Stack.Screen name="BookTestsScreen" component={BookTestsScreen}/>
         </>
       ) : (
         <>

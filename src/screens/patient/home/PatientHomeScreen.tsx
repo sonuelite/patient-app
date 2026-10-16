@@ -235,12 +235,19 @@ export default function PatientHomeScreen() {
       color: Colors.teal[600],
       route: 'PharmacyScreen',
     },
+    // {
+    //   label: 'Lab Tests',
+    //   icon: FlaskConical,
+    //   color: Colors.warning[600],
+    //   route: 'records',
+    // },
     {
-      label: 'Lab Tests',
+      label: 'Book Tests',
       icon: FlaskConical,
       color: Colors.warning[600],
-      route: 'records',
+      route: 'BookTestsScreen',
     },
+    //BookTestsScreen
     {
       label: 'Billing',
       icon: Receipt,

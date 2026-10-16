@@ -50,6 +50,7 @@ export type RootStackParamList = {
     EmergencyScreen: undefined;
     BillingScreen: undefined;
     VitalsScreen: {patientId: string};
+    BookTestsScreen: undefined;
 };
 
 export type UserRole = 'patient' | 'doctor' | 'admin';
