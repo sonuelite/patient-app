@@ -13,25 +13,86 @@ export function usePatientVitals(patientId: string) {
     loading: boolean; error: string | null;
   }>({patientId: '', token: null, attempt: 0, vital: null, loading: false, error: null});
 
-  useFocusEffect(useCallback(() => {
-    const controller = new AbortController();
-    setState({patientId, token: accessToken, attempt, vital: null,
-      loading: !!patientId && !!accessToken, error: null});
-    if (patientId && accessToken) {
-      getPatientVitals(patientId, controller.signal).then(vital => {
-        if (!controller.signal.aborted) {
-          setState({patientId, token: accessToken, attempt, vital, loading: false, error: null});
-        }
-      }).catch((error: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({patientId, token: accessToken, attempt, vital: null, loading: false,
-            error: getErrorMessage(error, 'Unable to load patient vitals')});
-        }
-      });
-    }
-    return () => controller.abort();
-  }, [patientId, accessToken, attempt]));
+  // useFocusEffect(useCallback(() => {
+  //   const controller = new AbortController();
+  //   setState({patientId, token: accessToken, attempt, vital: null,
+  //     loading: !!patientId && !!accessToken, error: null});
+  //   if (patientId && accessToken) {
+  //     getPatientVitals(patientId, controller.signal).then(vital => {
+  //       if (!controller.signal.aborted) {
+  //         setState({patientId, token: accessToken, attempt, vital, loading: false, error: null});
+  //       }
+  //     }).catch((error: unknown) => {
+  //       if (!controller.signal.aborted) {
+  //         setState({patientId, token: accessToken, attempt, vital: null, loading: false,
+  //           error: getErrorMessage(error, 'Unable to load patient vitals')});
+  //       }
+  //     });
+  //   }
+  //   return () => controller.abort();
+  // }, [patientId, accessToken, attempt]));
 
+  useFocusEffect(
+  useCallback(() => {
+    const controller = new AbortController();
+
+    console.log('Vitals patient ID:', patientId);
+    console.log('Vitals token available:', !!accessToken);
+
+    setState({
+      patientId,
+      token: accessToken,
+      attempt,
+      vital: null,
+      loading: !!patientId && !!accessToken,
+      error: null,
+    });
+
+    if (patientId && accessToken) {
+      console.log('Fetching patient vitals...');
+
+      getPatientVitals(patientId, controller.signal)
+        .then(vital => {
+          if (!controller.signal.aborted) {
+            console.log(
+              'Patient vitals result:',
+              JSON.stringify(vital, null, 2),
+            );
+
+            setState({
+              patientId,
+              token: accessToken,
+              attempt,
+              vital,
+              loading: false,
+              error: null,
+            });
+          }
+        })
+        .catch((error: unknown) => {
+          if (!controller.signal.aborted) {
+            console.log('Patient vitals error:', error);
+
+            setState({
+              patientId,
+              token: accessToken,
+              attempt,
+              vital: null,
+              loading: false,
+              error: getErrorMessage(
+                error,
+                'Unable to load patient vitals',
+              ),
+            });
+          }
+        });
+    } else {
+      console.log('Vitals request skipped: missing patient ID or token');
+    }
+
+    return () => controller.abort();
+  }, [patientId, accessToken, attempt]),
+);
   const matches = state.patientId === patientId && state.token === accessToken && state.attempt === attempt;
   return {
     vital: matches ? state.vital : null,

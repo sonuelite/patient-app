@@ -117,27 +117,83 @@ export interface PatientVitals {
   is_deleted?: boolean;
 }
 
+// export async function getPatientVitals(
+//   patientId: string | number,
+//   signal?: AbortSignal,
+// ): Promise<PatientVitals | null> {
+//   const response = await apiClient.get<{
+//     success: boolean; message?: string; data: PatientVitals | null;
+//   }>('/api/v1/patient/getpatientvitals', {
+//     params: {patient_id: patientId},
+//     headers: {'x-entity-id': '1'},
+//     signal,
+//   });
+//   console.log(
+//   'Vitals raw response:',
+//   JSON.stringify(response.data, null, 2),
+// );
+
+// console.log('Vitals validation:', {
+//   requestedPatientId: patientId,
+//   isArray: Array.isArray(response.data.data),
+//   returnedPatientId: response.data.data?.patient_id,
+// });
+//   if (response.data.success !== true) {
+//     throw new Error(response.data.message || 'Unable to load patient vitals');
+//   }
+//   const vital = response.data.data;
+//   if (vital == null) { return null; }
+//   if (typeof vital !== 'object' || Array.isArray(vital) ||
+//       String(vital.patient_id) !== String(patientId)) {
+//     throw new Error('Invalid patient vitals response');
+//   }
+//   return vital.is_deleted ? null : vital;
+// }
+
 export async function getPatientVitals(
   patientId: string | number,
   signal?: AbortSignal,
 ): Promise<PatientVitals | null> {
   const response = await apiClient.get<{
-    success: boolean; message?: string; data: PatientVitals | null;
+    success: boolean;
+    message?: string;
+    latest_date?: string;
+    count?: number;
+    data: PatientVitals[];
   }>('/api/v1/patient/getpatientvitals', {
     params: {patient_id: patientId},
     headers: {'x-entity-id': '1'},
     signal,
   });
-  if (response.data.success !== true) {
-    throw new Error(response.data.message || 'Unable to load patient vitals');
+
+  const result = response.data;
+
+  if (result.success !== true) {
+    throw new Error(result.message || 'Unable to load patient vitals');
   }
-  const vital = response.data.data;
-  if (vital == null) { return null; }
-  if (typeof vital !== 'object' || Array.isArray(vital) ||
-      String(vital.patient_id) !== String(patientId)) {
+
+  if (!Array.isArray(result.data)) {
     throw new Error('Invalid patient vitals response');
   }
-  return vital.is_deleted ? null : vital;
+
+  // No vitals recorded.
+  if (result.data.length === 0) {
+    return null;
+  }
+
+  // Validate records before displaying patient data.
+  if (
+    result.data.some(
+      vital =>
+        !vital ||
+        typeof vital !== 'object' ||
+        String(vital.patient_id) !== String(patientId),
+    )
+  ) {
+    throw new Error('Invalid patient vitals response');
+  }
+
+  return result.data.find(vital => !vital.is_deleted) ?? null;
 }
 
 export async function getStatesByCountryId(

@@ -624,32 +624,31 @@ export default function PatientRecordsScreen() {
             {myRads.map(rad => (
               <Card
                 key={`${rad.type}-${rad.reference_id}-${rad.radiology_id}`}
-                style={styles.labCard}
-                padding={Spacing.md}
+                style={[styles.labCard, styles.compactLabCard]}
+                padding={Spacing.sm}
               >
-                <View style={styles.labReportHeading}>
-                  <View style={styles.labReportIcon}><ImageIcon size={18} color={Colors.primary[600]} /></View>
-                  <Text style={styles.labReportTitle} numberOfLines={1}>{rad.test_name.trim()}</Text>
+                <View style={styles.compactLabHeading}>
+                  <ImageIcon size={25} color={Colors.primary[600]} />
+                  <View style={styles.recordInfo}>
+                    <Text style={styles.compactLabTitle} numberOfLines={1}>{rad.test_name.trim()}</Text>
+                    <Text style={styles.compactLabDate}>{moment(rad.ordered_at).format('D MMM YYYY')}</Text>
+                  </View>
                 </View>
-                {/* <Text style={styles.recordDesc}>{rad.modality || rad.type}</Text> */}
-                <Text style={styles.recordDesc}>{moment(rad.ordered_at).format('D MMM YYYY')}</Text>
                   <TouchableOpacity
-                    style={[styles.downloadBtn, styles.labReportDownload, !canDownloadRadiologyReport(rad) && styles.labDownloadDisabled]}
+                    style={[styles.compactPdfButton, !canDownloadRadiologyReport(rad) && styles.compactPdfDisabled]}
+                    hitSlop={4}
                     onPress={() => handleDownloadRadiology(rad)}
                     disabled={!canDownloadRadiologyReport(rad) || downloadingLab !== null}
                     accessibilityRole="button"
-                    accessibilityLabel={`Download and view report for ${rad.test_name.trim()}`}
+                    accessibilityLabel={canDownloadRadiologyReport(rad) ? `Download PDF report for ${rad.test_name.trim()}` : `PDF report for ${rad.test_name.trim()} is unavailable`}
                     accessibilityState={{disabled: !canDownloadRadiologyReport(rad) || downloadingLab !== null}}
                   >
                     {downloadingLab === `radiology-${rad.type}-${rad.reference_id}-${rad.radiology_id}` ? (
-                      <>
-                        <ActivityIndicator size="small" color={Colors.neutral[0]} />
-                        <Text style={styles.labReportDownloadText}>Loading...</Text>
-                      </>
+                      <ActivityIndicator size="small" color={Colors.neutral[0]} />
                     ) : (
                       <>
-                        <FileCheck size={16} color={Colors.neutral[0]} />
-                        <Text style={styles.labReportDownloadText}>Download</Text>
+                        <Download size={16} color={canDownloadRadiologyReport(rad) ? Colors.neutral[0] : Colors.neutral[400]} />
+                        {canDownloadRadiologyReport(rad) && <Text style={styles.labReportDownloadText}>PDF</Text>}
                       </>
                     )}
                   </TouchableOpacity>
