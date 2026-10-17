@@ -121,6 +121,7 @@ export default function PatientAppointmentsScreen() {
               date: item.appointmentDate,
               time: item.appointmentTime?.slice(0, 5) || '—',
               appointmentType: item.appointmentType,
+              tokenNo: item.token_no,
               status: String(item.status ?? '').trim().toLowerCase(),
             }));
 

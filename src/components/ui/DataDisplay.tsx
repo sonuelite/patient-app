@@ -139,8 +139,12 @@ export function AppointmentCard({
       style={styles.apptCard}
     >
       <View style={styles.apptLeft}>
-        <Text style={styles.apptTime}>{appointment.time}</Text>
-
+        {/* <Text style={styles.apptTime}>{appointment.time}</Text> */}
+  {appointment.tokenNo != null && (
+    <Text style={styles.tokenText} numberOfLines={1}>
+      Token #{appointment.tokenNo}
+    </Text>
+  )}
         <Text style={styles.apptDate}>{appointment.date}</Text>
       </View>
 
@@ -670,6 +674,13 @@ const styles = StyleSheet.create({
   apptLeft: {
     width: 70,
   },
+
+  tokenText: {
+  fontSize: 13,
+  fontWeight: '700',
+  color: Colors.primary[700],
+  marginBottom: 3,
+},
 
   apptTime: {
     fontSize: FontSize.base,
